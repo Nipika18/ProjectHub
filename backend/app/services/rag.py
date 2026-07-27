@@ -29,6 +29,12 @@ except ImportError:
 
 import pdfplumber
 
+def _clean_retriever_inputs(inputs: dict) -> dict:
+    cleaned = dict(inputs)
+    cleaned.pop("db", None)
+    cleaned.pop("self", None)
+    return cleaned
+
 class RAGService:
     def __init__(self):
         # Cache the tokenizer to avoid re-loading on every chunk call
@@ -102,16 +108,21 @@ class RAGService:
         elif file_type in ["xlsx", "xls", "csv"]:
             try:
                 if file_type == "csv":
-                    df = pd.read_csv(file_path)
-                    text = df.to_string(index=False)
-                    segments.append((text, {"sheet_name": "CSV Data"}))
+                    # Read in chunks to prevent OOM on massive CSVs
+                    for chunk_idx, chunk_df in enumerate(pd.read_csv(file_path, chunksize=100)):
+                        text = chunk_df.to_string(index=False)
+                        segments.append((text, {"sheet_name": "CSV Data", "chunk_index": chunk_idx}))
                 else:
                     xls = pd.ExcelFile(file_path)
                     for sheet_name in xls.sheet_names:
                         df = pd.read_excel(xls, sheet_name=sheet_name)
                         if not df.empty:
-                            text = df.to_string(index=False)
-                            segments.append((text, {"sheet_name": sheet_name}))
+                            # Process Excel sheet in chunks of 100 rows
+                            chunk_size = 100
+                            for i in range(0, len(df), chunk_size):
+                                chunk_df = df.iloc[i:i+chunk_size]
+                                text = chunk_df.to_string(index=False)
+                                segments.append((text, {"sheet_name": sheet_name, "row_start": i}))
             except Exception as e:
                 print(f"Error parsing tabular file {file_path}: {str(e)}")
 
@@ -294,11 +305,7 @@ class RAGService:
         except Exception as e:
             # Safe fallback to standard similarity search on error
             print(f"[Query Analysis Error] {str(e)}")
-def _clean_retriever_inputs(inputs: dict) -> dict:
-    cleaned = dict(inputs)
-    cleaned.pop("db", None)
-    cleaned.pop("self", None)
-    return cleaned
+            return {"is_summary": False, "category": "all"}
 
     @traceable(name="RAG Hybrid Retriever", run_type="retriever", process_inputs=_clean_retriever_inputs)
     def query_project_chunks(self, db: Session, project_id: int, query_text: str, milestone_id: int = None, category: str = None, top_k: int = 5) -> List[Dict[str, Any]]:

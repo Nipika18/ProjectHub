@@ -52,6 +52,23 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
+def create_verification_token(payload_data: dict, expires_hours: int = 24) -> str:
+    """Creates a signed JWT token carrying registration or invitation payload."""
+    expire = datetime.now(timezone.utc) + timedelta(hours=expires_hours)
+    to_encode = payload_data.copy()
+    to_encode.update({"exp": expire, "type": "stateless_verification"})
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+def decode_verification_token(token: str) -> Optional[dict]:
+    """Decodes a verification JWT token and returns the payload dictionary if valid."""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("type") != "stateless_verification":
+            return None
+        return payload
+    except JWTError:
+        return None
+
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """
     FastAPI dependency to extract JWT token, validate it, and return the User model.

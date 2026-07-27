@@ -13,6 +13,14 @@ class Settings(BaseSettings):
     SUPABASE_KEY: Optional[str] = None
     NEON_AUTH_URL: Optional[str] = None
     
+    # SMTP Configuration for Local Emails
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SENDER_EMAIL: Optional[str] = None
+    SENDER_NAME: str = "ProjectHub"
+    
     # JWT Auth Configuration
     SECRET_KEY: str
     ALGORITHM: str = "HS256"

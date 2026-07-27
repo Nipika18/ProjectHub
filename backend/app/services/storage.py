@@ -19,14 +19,16 @@ class FileStorageService:
             # Ensure local uploads directory exists
             os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
-    def get_file_path(self, filename: str, file_bytes: bytes, project_id: Optional[int] = None) -> str:
-        import hashlib
-        file_hash = hashlib.sha256(file_bytes).hexdigest()
+    def get_file_path(self, filename: str, file_hash: str, project_id: Optional[int] = None) -> str:
+        import os
         unique_prefix = file_hash[:16]  # Use first 16 chars of the hash
+        
+        # Sanitize filename to prevent Path Traversal
+        safe_filename = os.path.basename(filename)
         
         # Use a slash to create a folder structure in Supabase/Local
         prefix = f"proj_{project_id}/" if project_id is not None else ""
-        clean_filename = f"{prefix}{unique_prefix}_{filename}"
+        clean_filename = f"{prefix}{unique_prefix}_{safe_filename}"
         
         if self.use_supabase:
             return clean_filename
@@ -39,31 +41,49 @@ class FileStorageService:
         - In Supabase Mode: Uploads to Supabase 'documents' bucket. Returns the unique filename.
         - In Local Mode: Saves to disk. Returns the absolute disk path.
         """
-        # Read stream content as bytes to generate a hash
-        file_bytes = upload_file.file.read()
-        upload_file.file.seek(0)  # Reset pointer for subsequent reads
-        
-        file_path = self.get_file_path(upload_file.filename, file_bytes, project_id)
+        import hashlib
+        import tempfile
+        import os
+        import shutil
 
-        if self.use_supabase:
-            content_type = upload_file.content_type or "application/octet-stream"
-            
-            try:
-                # Upload to Supabase bucket (upsert=True overwrites duplicates without taking extra space)
-                self.supabase.storage.from_(self.bucket_name).upload(
-                    path=file_path,
-                    file=file_bytes,
-                    file_options={"content-type": content_type, "upsert": "true"}
-                )
-            except Exception as e:
-                print(f"Supabase upload notice (likely duplicate handled): {str(e)}")
-            return file_path
-        else:
-            # Ensure the directory exists (since file_path might now contain subfolders)
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, "wb") as buffer:
-                buffer.write(file_bytes)
-            return file_path
+        # Generate hash using chunks to prevent OOM
+        sha256_hash = hashlib.sha256()
+        
+        # Write to a temporary file while hashing to avoid keeping it in RAM
+        fd, temp_path = tempfile.mkstemp()
+        with os.fdopen(fd, 'wb') as f:
+            while chunk := upload_file.file.read(8192):
+                sha256_hash.update(chunk)
+                f.write(chunk)
+                
+        file_hash = sha256_hash.hexdigest()
+        file_path = self.get_file_path(upload_file.filename, file_hash, project_id)
+
+        try:
+            if self.use_supabase:
+                content_type = upload_file.content_type or "application/octet-stream"
+                
+                try:
+                    with open(temp_path, "rb") as f:
+                        self.supabase.storage.from_(self.bucket_name).upload(
+                            path=file_path,
+                            file=f.read(), # Supabase python client doesn't support streaming well, but it's okay for now. Better to read here than fail hashing.
+                            file_options={"content-type": content_type, "upsert": "true"}
+                        )
+                except Exception as e:
+                    print(f"Supabase upload notice (likely duplicate handled): {str(e)}")
+                return file_path
+            else:
+                # Ensure the directory exists (since file_path might now contain subfolders)
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                shutil.move(temp_path, file_path)
+                return file_path
+        finally:
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except:
+                    pass
 
     def delete_file(self, file_path: str) -> bool:
         """

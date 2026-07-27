@@ -152,5 +152,5 @@ def get_query_intent_prompt(query_text: str) -> str:
         "'team' if it specifically refers to what the team said, did, or documented, or 'all' if it is generic, "
         "unspecified, or refers to all documents.\n\n"
         f"User Query: \"{query_text}\"\n\n"
-        "Output JSON format exactly like: {\"is_summary\": true, \"category\": \"client\"}"
+        "Output JSON format exactly like: {{\\\"is_summary\\\": true, \\\"category\\\": \\\"client\\\"}}"
     )

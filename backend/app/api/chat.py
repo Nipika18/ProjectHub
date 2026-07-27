@@ -8,7 +8,7 @@ from openai import OpenAI
 from backend.app.core.database import get_db, SessionLocal
 from backend.app.core.security import get_current_user
 from backend.app.core.config import settings
-from backend.app.models import User, Project, ChatMessage
+from backend.app.models import User, Project, ChatMessage, ProjectMember
 from backend.app import schemas
 from backend.app.services.rag import rag_service
 from backend.app.core.prompts import get_query_rewrite_prompt, get_rag_chatbot_system_prompt
@@ -40,6 +40,15 @@ def get_chat_history(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    if not current_user.is_admin:
+        is_owner = project.owner_id == current_user.id
+        is_member = db.query(ProjectMember).filter(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == current_user.id
+        ).first() is not None
+        if not is_owner and not is_member:
+            raise HTTPException(status_code=403, detail="You do not have access to this project's chat history.")
+
     return []
 
 def _clean_chat_inputs(inputs: dict) -> dict:
@@ -67,6 +76,16 @@ def chat_with_project(
     project = db.query(Project).filter(Project.id == request.project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    if not current_user.is_admin:
+        is_owner = project.owner_id == current_user.id
+        is_member = db.query(ProjectMember).filter(
+            ProjectMember.project_id == request.project_id,
+            ProjectMember.user_id == current_user.id
+        ).first() is not None
+        if not is_owner and not is_member:
+            raise HTTPException(status_code=403, detail="You do not have access to chat with this project.")
+            
     project_name = project.name
 
     # Step 1 & 2: Parse session history passed from the frontend (limit to last 5 messages)
@@ -136,14 +155,6 @@ def chat_with_project(
         for hist in history_records:
             messages_payload.append({"role": hist.role, "content": hist.content})
         messages_payload.append({"role": "user", "content": f"Below are relevant document excerpts for context:\n{context_str}\n\nUsing the context above, answer the user's question.\nUser Question: {request.message}"})
-
-    # Append current turn context + question
-    latest_content = (
-        f"Below are relevant document excerpts for context:\n{context_str}\n\n"
-        f"Using the context above, answer the user's question.\n"
-        f"User Question: {request.message}"
-    )
-    messages_payload.append({"role": "user", "content": latest_content})
 
     def sse_generator():
         # Step A: Yield retrieved sources to the UI for Debug Mode

@@ -30,6 +30,19 @@ function updateSidebarProjectsLink() {
 // API Base configuration
 const API_BASE = "";
 
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.toString().replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
+}
+
 // =====================================================================
 // Generic Professional Confirmation Modal Helper
 // =====================================================================
@@ -351,7 +364,13 @@ async function handleRouting() {
     if (targetSection === "projects" && !hash.startsWith("projects/")) loadProjects();
     if (targetSection === "milestones") loadMilestonesRoadmap();
     if (targetSection === "uploads") populateProjectDropdowns();
-    if (targetSection === "chat") populateProjectDropdowns();
+    if (targetSection === "chat") {
+        await populateProjectDropdowns();
+        const chatEl = document.getElementById("chat-project-id");
+        if (chatEl && chatEl.value) {
+            chatEl.dispatchEvent(new Event("change"));
+        }
+    }
     if (targetSection === "logs") loadActivityLogs();
     if (targetSection === "stories") {
         await populateProjectDropdowns();
@@ -582,7 +601,7 @@ function bindAuthEvents() {
                 throw new Error(err.detail || "Registration failed.");
             }
 
-            showToast("Verification email sent! Please check your inbox and click the link to verify your account and log in.", "success");
+            showToast("Verification email sent! Please check your inbox and click the link to verify your account.", "success");
             registerForm.classList.remove("active");
             loginForm.classList.add("active");
         } catch (err) {
@@ -1244,8 +1263,8 @@ async function loadProjects() {
 
             card.innerHTML = `
                 <div class="project-card-header">
-                    <h3>${project.name}</h3>
-                    <p>${desc}</p>
+                    <h3>${escapeHTML(project.name)}</h3>
+                    <p>${escapeHTML(desc)}</p>
                 </div>
                 <div class="project-card-footer">
                     <span><i data-lucide="calendar" style="width:12px;height:12px;"></i> Created: ${created}</span>
@@ -1342,10 +1361,10 @@ async function loadProjectDetailMilestones(projectId) {
             card.innerHTML = `
                 <div class="timeline-card-node ${nodeClass}"></div>
                 <div class="timeline-card-header">
-                    <h4>${milestone.title}</h4>
+                    <h4>${escapeHTML(milestone.title)}</h4>
                     <span class="status-badge ${milestone.status}">${milestone.status}</span>
                 </div>
-                <p class="timeline-card-body">${milestone.description || "No details provided."}</p>
+                <p class="timeline-card-body">${escapeHTML(milestone.description) || "No details provided."}</p>
                 <div class="timeline-card-header">
                     <p><i data-lucide="calendar" style="width:12px;height:12px;display:inline;"></i> Due: ${formattedDate}</p>
                     <div class="timeline-card-actions" style="display: ${(state.user?.is_admin || state.currentProject?.user_role === 'Manager' || state.currentProject?.user_role === 'Admin') ? 'flex' : 'none'};">
@@ -1394,8 +1413,8 @@ async function loadProjectDetailDocuments(projectId) {
 
             const row = document.createElement("tr");
             row.innerHTML = `
-                <td><strong style="color:var(--color-primary); cursor:pointer; text-decoration: underline;" onclick="downloadDocumentSecurely(${doc.id}, '${doc.name}')">${doc.name}</strong></td>
-                <td><span class="text-muted">${mName}</span></td>
+                <td><strong style="color:var(--color-primary); cursor:pointer; text-decoration: underline;" onclick="downloadDocumentSecurely(${doc.id}, '${escapeHTML(doc.name).replace(/'/g, "\\'")}')">${escapeHTML(doc.name)}</strong></td>
+                <td><span class="text-muted">${escapeHTML(mName)}</span></td>
                 <td><span class="text-muted">${categoryLabel}</span></td>
                 <td>${sizeKB} KB</td>
                 <td><span class="file-type-badge ${doc.file_type}">${doc.file_type}</span></td>
@@ -2385,10 +2404,13 @@ function formatMessageContent(text) {
     // Bold: **text**
     html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
-    // Parse Inline Citations: [Filename, Page X] or [Filename, Segment Y]
-    html = html.replace(/\[([^\]]+?\.(?:pdf|docx|xlsx|csv|html|txt)),\s*([^\]]+)\]/g, (match, docName, pageLabel) => {
-        const shortName = docName.length > 20 ? docName.substring(0, 17) + "..." : docName;
-        return `<span class="inline-citation-badge" title="${docName}, ${pageLabel}">[${shortName}, ${pageLabel}]</span>`;
+    // Parse Inline Citations: [Filename, Page X], [Chunk 1], [Document.docx, Segment Y]
+    html = html.replace(/\[((?:Chunk\s*\d+|[^\]]+?\.(?:pdf|docx|xlsx|csv|html|txt)|Refer to[^\]]*|Source[^\]]*))(?:\s*,\s*([^\]]+))?\]/gi, (match, docName, pageLabel) => {
+        if (pageLabel) {
+            const shortName = docName.length > 20 ? docName.substring(0, 17) + "..." : docName;
+            return `<span class="inline-citation-badge" title="${docName}, ${pageLabel}">📌 ${shortName}, ${pageLabel}</span>`;
+        }
+        return `<span class="inline-citation-badge" title="${docName}">📌 ${docName}</span>`;
     });
 
     // Replace remaining newlines with <br>
@@ -2790,7 +2812,10 @@ async function populateProjectDropdowns(force = false) {
 
         if (effectiveGlobal) {
             if (uploadProjSelect) uploadProjSelect.value = effectiveGlobal;
-            if (chatProjSelect) chatProjSelect.value = effectiveGlobal;
+            if (chatProjSelect) {
+                chatProjSelect.value = effectiveGlobal;
+                chatProjSelect.dispatchEvent(new Event("change"));
+            }
             if (filterProjSelect) filterProjSelect.value = effectiveGlobal;
             if (createMilestoneSelect) createMilestoneSelect.value = effectiveGlobal;
             if (storyProjSelect) storyProjSelect.value = effectiveGlobal;
@@ -3246,9 +3271,18 @@ document.body.addEventListener("click", (e) => {
 if (btnCloseInviteModal) btnCloseInviteModal.addEventListener("click", () => inviteModal.classList.remove("active"));
 if (btnCancelInviteModal) btnCancelInviteModal.addEventListener("click", () => inviteModal.classList.remove("active"));
 
+let isSubmittingInvite = false;
 if (inviteForm) inviteForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (isSubmittingInvite) return;
     if (!checkAdminAccess("invite users")) return;
+    isSubmittingInvite = true;
+
+    const submitBtn = inviteForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Sending...';
+    }
 
     const email = document.getElementById("invite-email-input").value.trim();
     const fullName = document.getElementById("invite-fullname-input").value.trim();
@@ -3285,6 +3319,13 @@ if (inviteForm) inviteForm.addEventListener("submit", async (e) => {
         }
     } catch (err) {
         showToast(err.message, "error");
+    } finally {
+        isSubmittingInvite = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i data-lucide="send"></i> Send Invite';
+            lucide.createIcons();
+        }
     }
 });
 
@@ -5223,7 +5264,7 @@ async function loadTeamMembers(projectId) {
 
             const isOwner = (selectedProj && selectedProj.owner_id === m.user_id) || (state.currentProject && state.currentProject.owner_id === m.user_id);
             const removeBtnHTML = isOwner ? `
-                <span title="Project Creator cannot be removed" style="font-size: 0.75rem; color: #64748b; font-weight: 600; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">Creator</span>
+                <span title="Project Admin cannot be removed" style="font-size: 0.75rem; color: #0284c7; font-weight: 600; background: #e0f2fe; border: 1px solid #bae6fd; padding: 4px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="shield-check" style="width: 12px; height: 12px;"></i> Admin</span>
             ` : `
                 <button class="btn-icon-danger" onclick="removeTeamMember(${projectId}, ${m.id})">
                     <i data-lucide="user-minus"></i>
@@ -5275,6 +5316,9 @@ document.getElementById("btn-add-team-member")?.addEventListener("click", async 
         return;
     }
 
+    const addBtn = document.getElementById("btn-add-team-member");
+    const originalText = addBtn ? addBtn.innerHTML : "";
+
     const emailInput = document.getElementById("team-member-email");
     const roleSelect = document.getElementById("team-member-role");
     const email = emailInput.value.trim();
@@ -5286,6 +5330,11 @@ document.getElementById("btn-add-team-member")?.addEventListener("click", async 
     }
 
     try {
+        if (addBtn) {
+            addBtn.disabled = true;
+            addBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Adding...';
+        }
+
         const res = await fetch(`${API_BASE}/api/projects/${state.currentProject.id}/team`, {
             method: "POST",
             headers: {
@@ -5306,6 +5355,12 @@ document.getElementById("btn-add-team-member")?.addEventListener("click", async 
         }
     } catch (e) {
         showToast(`Network error: ${e.message}`, "error");
+    } finally {
+        if (addBtn) {
+            addBtn.disabled = false;
+            addBtn.innerHTML = originalText;
+            lucide.createIcons();
+        }
     }
 });
 

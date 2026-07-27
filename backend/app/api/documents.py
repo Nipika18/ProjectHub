@@ -52,10 +52,13 @@ async def upload_document(
         Document.project_id == project_id
     ).first()
 
-    # Pre-calculate the new file path to compare
-    file_bytes = file.file.read()
+    import hashlib
+    sha256_hash = hashlib.sha256()
+    while chunk := file.file.read(8192):
+        sha256_hash.update(chunk)
+    file_hash = sha256_hash.hexdigest()
     file.file.seek(0)
-    new_file_path = storage_service.get_file_path(file.filename, file_bytes, project_id)
+    new_file_path = storage_service.get_file_path(file.filename, file_hash, project_id)
 
     if existing_doc:
         if existing_doc.file_path == new_file_path:
@@ -189,6 +192,21 @@ def list_milestone_documents(
     current_user: User = Depends(get_current_user)
 ):
     """Lists all documents associated with a milestone."""
+    milestone = db.query(Milestone).filter(Milestone.id == milestone_id).first()
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+
+    project_id = milestone.project_id
+    if not current_user.is_admin:
+        project = db.query(Project).filter(Project.id == project_id).first()
+        is_owner = project and project.owner_id == current_user.id
+        is_member = db.query(ProjectMember).filter(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == current_user.id
+        ).first() is not None
+        if not is_owner and not is_member:
+            raise HTTPException(status_code=403, detail="You do not have access to this milestone's documents.")
+
     return db.query(Document).filter(Document.milestone_id == milestone_id).order_by(Document.created_at.desc()).all()
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

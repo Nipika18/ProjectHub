@@ -99,6 +99,16 @@ def get_project(
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+        
+    if not current_user.is_admin:
+        is_owner = project.owner_id == current_user.id
+        is_member = db.query(ProjectMember).filter(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == current_user.id
+        ).first() is not None
+        if not is_owner and not is_member:
+            raise HTTPException(status_code=403, detail="You do not have access to this project.")
+            
     populate_user_role(db, current_user, project)
     return project
 

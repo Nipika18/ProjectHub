@@ -7,11 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFi
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from backend.app.core.database import get_db
+from fastapi.responses import HTMLResponse
 from backend.app.core.security import (
     get_password_hash,
     verify_password,
     create_access_token,
     create_refresh_token,
+    create_verification_token,
+    decode_verification_token,
     get_current_user,
     get_current_admin_user
 )
@@ -92,9 +95,9 @@ def log_activity(db: Session, user_id: Optional[int], action: str, details: str)
     db.add(log)
     db.commit()
 
-@router.post("/register", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(user_in: schemas.UserCreate, request: Request, db: Session = Depends(get_db)):
-    """Registers a new user via Supabase Auth and sends a verification email without creating unverified local accounts."""
+    """Issues a stateless registration token & sends verification email. Does NOT save to DB until confirmed."""
     validate_corporate_domain(user_in.email)
     existing_user = db.query(User).filter(User.email == user_in.email).first()
     if existing_user:
@@ -103,63 +106,103 @@ def register(user_in: schemas.UserCreate, request: Request, db: Session = Depend
             detail="A user with this email already exists."
         )
     
-    neon_url = get_neon_auth_url()
-    if neon_url:
-        try:
-            origin = request.headers.get("origin") or "http://localhost:8000"
-            res = requests.post(
-                f"{neon_url}/sign-up/email",
-                json={
-                    "email": user_in.email,
-                    "password": user_in.password,
-                    "name": user_in.full_name or user_in.email.split("@")[0]
-                },
-                headers={"Origin": origin},
-                timeout=10
-            )
-            print(f"[ProjectHub] Neon Auth sign_up response: {res.status_code}")
-            if res.status_code >= 400:
-                err_msg = res.json().get("message", res.text) if "application/json" in res.headers.get("Content-Type", "") else res.text
-                if "already exists" in err_msg.lower() or "duplicate" in err_msg.lower():
-                    raise HTTPException(
-                        status_code=409,
-                        detail="This email is already registered in Neon Auth. Please log in or delete it from the Neon dashboard."
-                    )
-            
-            local_user = User(
-                email=user_in.email,
-                hashed_password=get_password_hash(user_in.password),
-                full_name=user_in.full_name or user_in.email.split("@")[0],
-                is_active=True,
-                is_admin=False
-            )
-            db.add(local_user)
-            db.commit()
-            db.refresh(local_user)
+    payload = {
+        "action": "register",
+        "email": user_in.email,
+        "full_name": user_in.full_name or user_in.email.split("@")[0],
+        "hashed_password": get_password_hash(user_in.password),
+        "is_admin": False
+    }
 
-            ip = get_client_ip(request)
-            log_activity(db, local_user.id, "register_user", f"User registered (Neon Sync): {user_in.email} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
-            return local_user
-        except HTTPException:
-            raise
-        except Exception as e:
-            print(f"[ProjectHub] Neon Auth sign_up error/notice: {str(e)}")
+    # Send verification email
+    try:
+        from backend.app.services.email_service import send_verification_email
+        origin = request.headers.get("origin") or "http://localhost:8000"
+        token = create_verification_token(payload)
+        verify_url = f"{origin.rstrip('/')}/api/auth/verify-email?token={token}"
+        send_verification_email(user_in.email, payload["full_name"], verify_url)
+    except Exception as e:
+        print(f"[ProjectHub] Verification email dispatch error: {e}")
 
-    # Fallback or local registration
-    local_user = User(
-        email=user_in.email,
-        hashed_password=get_password_hash(user_in.password),
-        full_name=user_in.full_name or user_in.email.split("@")[0],
-        is_active=True,
-        is_admin=False
-    )
-    db.add(local_user)
-    db.commit()
-    db.refresh(local_user)
+    return {
+        "detail": "Verification email sent! Please check your inbox and click the link to complete registration.",
+        "email": user_in.email
+    }
 
-    ip = get_client_ip(request)
-    log_activity(db, local_user.id, "register_user", f"User registered locally: {user_in.email} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
-    return local_user
+@router.get("/verify-email", response_class=HTMLResponse)
+def verify_email(token: str, db: Session = Depends(get_db)):
+    """Validates registration/invite JWT token, inserts User into DB for the FIRST time, and activates account."""
+    payload = decode_verification_token(token)
+    if not payload or not payload.get("email"):
+        return HTMLResponse(content="""
+        <html>
+            <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+                <h1 style="color: #ef4444;">Verification Link Expired or Invalid</h1>
+                <p>The email verification link is invalid or has expired. Please try requesting a new link or contact support.</p>
+            </body>
+        </html>
+        """, status_code=400)
+
+    email = payload["email"]
+    user = db.query(User).filter(User.email == email).first()
+    
+    if not user:
+        # CREATE USER IN POSTGRESQL FOR THE FIRST TIME
+        user = User(
+            email=email,
+            full_name=payload.get("full_name", email.split("@")[0]),
+            hashed_password=payload.get("hashed_password"),
+            is_active=True,
+            is_admin=payload.get("is_admin", False)
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        log_activity(db, user.id, "verify_email", f"User account created & verified via email link: {email}")
+
+        # If this was an invite with project assignment, add member record
+        project_id = payload.get("project_id")
+        if project_id:
+            project = db.query(Project).filter(Project.id == project_id).first()
+            if project:
+                member = ProjectMember(project_id=project.id, user_id=user.id, role=payload.get("role", "Frontend"))
+                db.add(member)
+                from backend.app.models import Notification
+                notification = Notification(user_id=user.id, title="Added to Project", message=f"You have been added to '{project.name}' as '{payload.get('role', 'Frontend')}'.")
+                db.add(notification)
+                db.commit()
+                
+                # Auto-assign tasks to the newly joined member
+                from backend.app.api.team import _auto_assign_project_tasks_internal
+                _auto_assign_project_tasks_internal(db, project.id)
+
+    return HTMLResponse(content=f"""
+    <html>
+        <head>
+            <meta http-equiv="refresh" content="3;url=/">
+            <style>
+                body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f7fa; color: #333; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}
+                .card {{ background: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); text-align: center; max-width: 450px; }}
+                h1 {{ color: #16a34a; margin-top: 0; }}
+                p {{ color: #4b5563; line-height: 1.5; font-size: 16px; }}
+                .btn {{ background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-top: 20px; }}
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h1>Account Created & Activated!</h1>
+                <p>Your email <strong>{user.email}</strong> has been verified and your account is now active.</p>
+                <p style="font-size:14px; color:#6b7280; margin-top:10px;">Redirecting you to the Login page in 3 seconds...</p>
+                <a href="/" class="btn">Proceed to Log In</a>
+            </div>
+            <script>
+                setTimeout(function() {{
+                    window.location.href = "/";
+                }}, 3000);
+            </script>
+        </body>
+    </html>
+    """)
 
 @router.post("/invite", status_code=status.HTTP_201_CREATED)
 def invite_user(
@@ -168,111 +211,74 @@ def invite_user(
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin_user)
 ):
-    """Admin-only endpoint to invite/register a user and optionally assign them to a project team."""
+    """Admin-only endpoint to invite/register a user. If user doesn't exist, issues a stateless invite token."""
     validate_corporate_domain(invite_in.email)
     user = db.query(User).filter(User.email == invite_in.email).first()
-    created_new = False
     
-    if not user:
-        import secrets
-        pwd = invite_in.password or secrets.token_urlsafe(16)
-        hashed_pwd = get_password_hash(pwd)
-        user = User(
-            email=invite_in.email,
-            hashed_password=hashed_pwd,
-            full_name=invite_in.full_name
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        created_new = True
-        log_activity(db, current_admin.id, "register_user", f"Admin invited & registered user: {user.full_name} ({user.email})")
-
-    assigned_project = None
-    if invite_in.project_id:
-        project = db.query(Project).filter(Project.id == invite_in.project_id).first()
-        if project:
-            existing_mem = db.query(ProjectMember).filter(
-                ProjectMember.project_id == project.id,
-                ProjectMember.user_id == user.id
-            ).first()
-            if not existing_mem:
-                member = ProjectMember(
-                    project_id=project.id,
-                    user_id=user.id,
-                    role=invite_in.role or "Frontend"
-                )
+    if user:
+        # User already exists in DB -> update project membership
+        assigned_project = None
+        if invite_in.project_id:
+            project = db.query(Project).filter(Project.id == invite_in.project_id).first()
+            if project:
+                existing_mem = db.query(ProjectMember).filter(
+                    ProjectMember.project_id == project.id,
+                    ProjectMember.user_id == user.id
+                ).first()
+                if existing_mem:
+                    return {"detail": f"User '{user.full_name}' is already a member of project '{project.name}' as '{existing_mem.role}'."}
+                
+                member = ProjectMember(project_id=project.id, user_id=user.id, role=invite_in.role or "Frontend")
                 db.add(member)
-                
                 from backend.app.models import Notification
-                notification = Notification(
-                    user_id=user.id,
-                    title="Added to Project",
-                    message=f"You have been added to the project '{project.name}' as '{invite_in.role or 'Frontend'}'."
-                )
+                notification = Notification(user_id=user.id, title="Added to Project", message=f"You have been added to '{project.name}' as '{invite_in.role or 'Frontend'}'.")
                 db.add(notification)
                 db.commit()
                 assigned_project = project.name
-            else:
-                existing_mem.role = invite_in.role or "Frontend"
                 
-                from backend.app.models import Notification
-                notification = Notification(
-                    user_id=user.id,
-                    title="Project Role Updated",
-                    message=f"Your role in project '{project.name}' has been updated to '{invite_in.role or 'Frontend'}'."
-                )
-                db.add(notification)
-                db.commit()
-                assigned_project = project.name
+                # Auto-assign tasks to the newly joined member
+                from backend.app.api.team import _auto_assign_project_tasks_internal
+                _auto_assign_project_tasks_internal(db, project.id)
 
-    # Try Neon Auth Registration (No native invite email, so we just sign them up)
-    neon_url = get_neon_auth_url()
-    neon_invited = False
-    if neon_url and created_new:
-        try:
-            res = requests.post(
-                f"{neon_url}/sign-up/email",
-                json={
-                    "email": invite_in.email,
-                    "password": pwd,
-                    "name": invite_in.full_name
-                },
-                headers={"Origin": request.headers.get("origin") or "http://localhost:8000"},
-                timeout=10
-            )
-            neon_invited = True
-            print(f"[ProjectHub] Neon Auth registration triggered for {invite_in.email}: {res.status_code}")
-        except Exception as e:
-            print(f"[ProjectHub] Neon Auth invite notice/error: {e}")
+                try:
+                    from backend.app.services.email_service import send_project_added_email
+                    send_project_added_email(user.email, user.full_name, project.name, invite_in.role or "Frontend")
+                    print(f"[ProjectHub] Sent project assignment email to existing user {user.email}")
+                except Exception as e:
+                    print(f"[ProjectHub] SMTP error sending project assignment email to existing user: {e}")
+        return {"detail": f"Existing user '{user.full_name}' assigned to project '{assigned_project}'." if assigned_project else f"User '{user.full_name}' already exists."}
 
-    # Send invite email via direct SMTP with temporary credentials
-    smtp_invited = False
-    if created_new:
-        try:
-            from backend.app.services.email_service import send_invite_email, is_smtp_configured
-            if is_smtp_configured():
-                origin = request.headers.get("origin") or "http://localhost:8000"
-                send_invite_email(invite_in.email, invite_in.full_name, pwd, origin)
-                smtp_invited = True
-                print(f"[ProjectHub] Invite email sent via SMTP to {invite_in.email}")
-        except Exception as e:
-            print(f"[ProjectHub] SMTP invite email error (non-fatal): {e}")
+    # User does NOT exist in DB -> Create stateless invitation token
+    import secrets
+    pwd = invite_in.password or secrets.token_urlsafe(16)
+    hashed_pwd = get_password_hash(pwd)
+    
+    payload = {
+        "action": "invite",
+        "email": invite_in.email,
+        "full_name": invite_in.full_name,
+        "hashed_password": hashed_pwd,
+        "is_admin": False,
+        "project_id": invite_in.project_id,
+        "role": invite_in.role or "Frontend"
+    }
 
-    msg = f"User '{user.full_name}' ({user.email}) has been successfully invited and registered!" if created_new else f"User '{user.full_name}' ({user.email}) already exists."
-    if neon_invited:
-        msg += " The user has been registered in Neon Auth as well."
-    if assigned_project:
-        msg += f" Added to project '{assigned_project}' as '{invite_in.role or 'Frontend'}'."
+    try:
+        from backend.app.services.email_service import send_invite_email
+        origin = request.headers.get("origin") or "http://localhost:8000"
+        token = create_verification_token(payload)
+        confirm_url = f"{origin.rstrip('/')}/api/auth/verify-email?token={token}"
+        send_invite_email(invite_in.email, invite_in.full_name, pwd, confirm_url)
+        print(f"[ProjectHub] Stateless invite email sent to {invite_in.email}")
+    except Exception as e:
+        print(f"[ProjectHub] SMTP invite email error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send invitation email. Please check server email configuration.")
+
+    log_activity(db, current_admin.id, "register_user", f"Admin sent stateless invite to: {invite_in.full_name} ({invite_in.email})")
 
     return {
-        "detail": msg,
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "full_name": user.full_name,
-            "created_new": created_new
-        }
+        "detail": f"Invitation email sent to {invite_in.email}. User account will be created when they confirm.",
+        "email": invite_in.email
     }
 
 @router.get("/users", response_model=List[schemas.User])
@@ -319,62 +325,28 @@ def assign_admin_role(
 
 @router.post("/login", response_model=schemas.Token)
 def login(login_in: schemas.UserLogin, request: Request, db: Session = Depends(get_db)):
-    """Logs in a user via JSON payload (email and password), checking Supabase Auth first then local fallback."""
+    """Logs in a user via JSON payload (email and password), using native PostgreSQL auth."""
     validate_corporate_domain(login_in.email)
     check_rate_limit(login_in.email)
     
     user = db.query(User).filter(User.email == login_in.email).first()
-    neon_auth_ok = False
-    neon_url = get_neon_auth_url()
-    if neon_url:
-        try:
-            auth_res = requests.post(
-                f"{neon_url}/sign-in/email",
-                json={
-                    "email": login_in.email,
-                    "password": login_in.password
-                },
-                timeout=10
-            )
-            if auth_res.status_code == 200:
-                neon_auth_ok = True
-                print(f"[ProjectHub] Neon Auth login successful for {login_in.email}")
-            else:
-                err_msg = auth_res.text.lower()
-                if "email not verified" in err_msg or "email_not_verified" in err_msg:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Please verify your email address first."
-                    )
-                print(f"[ProjectHub] Neon sign_in notice/error: {err_msg}")
-        except HTTPException:
-            raise
-        except Exception as e:
-            print(f"[ProjectHub] Neon sign_in exception: {e}")
     
-    if not neon_auth_ok:
-        if not user or not verify_password(login_in.password, user.hashed_password):
-            record_failed_login(login_in.email)
-            ip = get_client_ip(request)
-            log_activity(db, None, "failed_login", f"Failed login attempt for {login_in.email} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    else:
-        if not user:
-            user = User(
-                email=login_in.email,
-                hashed_password=get_password_hash(login_in.password),
-                full_name=login_in.email.split("@")[0]
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-        else:
-            user.hashed_password = get_password_hash(login_in.password)
-            db.commit()
+    if not user or not verify_password(login_in.password, user.hashed_password):
+        record_failed_login(login_in.email)
+        ip = get_client_ip(request)
+        log_activity(db, None, "failed_login", f"Failed login attempt for {login_in.email} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please check your inbox and verify your email address before logging in."
+        )
+
 
     record_successful_login(login_in.email)
     access_token = create_access_token(data={"sub": user.email})

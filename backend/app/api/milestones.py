@@ -3,7 +3,7 @@ from typing import List
 from sqlalchemy.orm import Session
 from backend.app.core.database import get_db
 from backend.app.core.security import get_current_user, get_current_admin_user, check_is_project_manager_or_admin
-from backend.app.models import Milestone, Project, User
+from backend.app.models import Milestone, Project, User, ProjectMember
 from backend.app import schemas
 from backend.app.api.auth import log_activity
 
@@ -49,8 +49,20 @@ def list_project_milestones(
     current_user: User = Depends(get_current_user)
 ):
     """Lists all milestones associated with a specific project."""
-    return db.query(Milestone).filter(Milestone.project_id == project_id).order_by(Milestone.due_date.asc()).all()
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
 
+    if not current_user.is_admin:
+        is_owner = project.owner_id == current_user.id
+        is_member = db.query(ProjectMember).filter(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == current_user.id
+        ).first() is not None
+        if not is_owner and not is_member:
+            raise HTTPException(status_code=403, detail="You do not have access to this project.")
+
+    return db.query(Milestone).filter(Milestone.project_id == project_id).order_by(Milestone.due_date.asc()).all()
 @router.put("/{milestone_id}", response_model=schemas.Milestone)
 def update_milestone(
     milestone_id: int,

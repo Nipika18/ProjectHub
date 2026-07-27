@@ -2255,22 +2255,27 @@ h1, h2, h3, h4 {
 .inline-citation-badge {
     display: inline-flex;
     align-items: center;
-    background: rgba(14, 165, 233, 0.08); /* light primary tint */
-    border: 1px solid rgba(14, 165, 233, 0.2);
-    color: var(--color-primary-hover);
-    padding: 2px 6px;
-    border-radius: 4px; /* rectangular box type */
-    font-size: 10.5px;
+    gap: 3px;
+    background: #e0f2fe; /* Light sky blue fill */
+    border: 1px solid #7dd3fc; /* Sky blue border */
+    color: #0284c7; /* Sky blue text */
+    padding: 3px 8px;
+    border-radius: 12px; /* Smooth pill shape */
+    font-size: 11px;
     font-weight: 600;
     margin: 0 4px;
-    cursor: help;
+    cursor: pointer;
     user-select: none;
-    transition: var(--transition-fast);
+    box-shadow: 0 1px 3px rgba(14, 165, 233, 0.12);
+    transition: all 0.2s ease-in-out;
 }
 
 .inline-citation-badge:hover {
-    background: rgba(14, 165, 233, 0.15);
-    border-color: var(--color-primary);
+    background: #bae6fd;
+    border-color: #38bdf8;
+    color: #0369a1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(14, 165, 233, 0.25);
 }
 
 /* Bullet list styles within chat bubbles */

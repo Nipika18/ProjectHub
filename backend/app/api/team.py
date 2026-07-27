@@ -62,6 +62,31 @@ def add_team_member(
     db.commit()
     db.refresh(member)
 
+    # Dispatch email notification to the added user
+    try:
+        from backend.app.services.email_service import send_project_added_email
+        send_project_added_email(user.email, user.full_name, project.name, request.role)
+    except Exception as e:
+        print(f"[ProjectHub] Project member notification email error: {e}")
+
+    # Auto-assign existing unassigned tasks matching this new member's role
+    try:
+        unassigned_tasks = db.query(Task).join(UserStory).filter(
+            UserStory.project_id == project_id,
+            Task.task_type == request.role,
+            Task.assigned_to.is_(None)
+        ).all()
+        for t in unassigned_tasks:
+            t.assigned_to = user.id
+            db.add(Notification(
+                user_id=user.id,
+                title="Task Auto-Assigned",
+                message=f"Task '{t.title}' has been auto-assigned to you in project '{project.name}'."
+            ))
+        db.commit()
+    except Exception as e:
+        print(f"[ProjectHub] Error auto-assigning tasks to new member: {e}")
+
     return schemas.ProjectMember(
         id=member.id,
         project_id=member.project_id,
@@ -81,6 +106,17 @@ def get_team_members(
 ):
     """Returns all team members for a project with their roles."""
     project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if not current_user.is_admin:
+        is_owner = project.owner_id == current_user.id
+        is_member = db.query(ProjectMember).filter(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == current_user.id
+        ).first() is not None
+        if not is_owner and not is_member:
+            raise HTTPException(status_code=403, detail="You do not have access to this project's team.")
     if project and project.owner_id:
         owner_member = db.query(ProjectMember).filter(
             ProjectMember.project_id == project_id,
@@ -120,6 +156,31 @@ def get_team_members(
     return result
 
 
+def _auto_assign_project_tasks_internal(db: Session, project_id: int):
+    members = db.query(ProjectMember).filter(ProjectMember.project_id == project_id).all()
+    role_map = {m.role: m.user_id for m in members}
+    if not role_map:
+        return 0
+
+    from backend.app.models import UserStory, Notification
+    stories = db.query(UserStory).filter(UserStory.project_id == project_id).all()
+    assigned_count = 0
+
+    for story in stories:
+        for task in story.tasks:
+            if not task.assigned_to and task.task_type in role_map:
+                task.assigned_to = role_map[task.task_type]
+                notification = Notification(
+                    user_id=task.assigned_to,
+                    title="Task Assigned",
+                    message=f"Task '{task.title}' has been auto-assigned to you."
+                )
+                db.add(notification)
+                assigned_count += 1
+
+    db.commit()
+    return assigned_count
+
 @router.post("/auto-assign", status_code=status.HTTP_200_OK)
 def auto_assign_project_tasks(
     project_id: int,
@@ -134,32 +195,7 @@ def auto_assign_project_tasks(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Admin-only check enforced via get_current_admin_user dependency
-
-    members = db.query(ProjectMember).filter(ProjectMember.project_id == project_id).all()
-    role_map = {m.role: m.user_id for m in members}
-
-    if not role_map:
-        raise HTTPException(status_code=400, detail="No team members configured to assign tasks to")
-
-    stories = db.query(UserStory).filter(UserStory.project_id == project_id).all()
-    assigned_count = 0
-
-    for story in stories:
-        for task in story.tasks:
-            if not task.assigned_to and task.task_type in role_map:
-                task.assigned_to = role_map[task.task_type]
-                
-                notification = Notification(
-                    user_id=task.assigned_to,
-                    title="Task Assigned",
-                    message=f"Task '{task.title}' has been auto-assigned to you in project '{project.name}'."
-                )
-                db.add(notification)
-                
-                assigned_count += 1
-
-    db.commit()
+    assigned_count = _auto_assign_project_tasks_internal(db, project_id)
     if assigned_count == 0:
         return {"detail": "All tasks are already assigned!"}
     return {"detail": f"Successfully assigned {assigned_count} tasks to team members based on their roles."}
