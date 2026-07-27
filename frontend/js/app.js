@@ -2691,7 +2691,19 @@ function bindTimelineTimelineListCheckboxEvents() {
 }
 
 function bindLogsEvents() {
-    document.getElementById("btn-refresh-logs").addEventListener("click", loadActivityLogs);
+    document.getElementById("btn-refresh-logs").addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Refreshing...';
+        btn.disabled = true;
+        lucide.createIcons();
+        
+        await loadActivityLogs();
+        
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+        lucide.createIcons();
+    });
 }
 
 async function loadActivityLogs() {
@@ -5463,7 +5475,19 @@ window.updateMemberRole = async function (projectId, memberId, email, newRole) {
 // =====================================================================
 // My Tasks Board Handlers
 // =====================================================================
-document.getElementById("btn-refresh-mytasks")?.addEventListener("click", loadMyTasks);
+document.getElementById("btn-refresh-mytasks")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Refreshing...';
+    btn.disabled = true;
+    lucide.createIcons();
+    
+    await loadMyTasks();
+    
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+    lucide.createIcons();
+});
 
 async function loadMyTasks() {
     if (!state.token) return;
