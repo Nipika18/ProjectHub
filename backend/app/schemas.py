@@ -185,23 +185,6 @@ class ChatSource(BaseModel):
 
 
 # =====================================================================
-# Chat Message History Schemas
-# =====================================================================
-class ChatMessageBase(BaseModel):
-    role: str
-    content: str
-
-class ChatMessage(ChatMessageBase):
-    id: int
-    project_id: int
-    user_id: Optional[int] = None
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-# =====================================================================
 # Jira-style User Stories & Tasks
 # =====================================================================
 class TaskBase(BaseModel):

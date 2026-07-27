@@ -8,7 +8,7 @@ from openai import OpenAI
 from backend.app.core.database import get_db, SessionLocal
 from backend.app.core.security import get_current_user
 from backend.app.core.config import settings
-from backend.app.models import User, Project, ChatMessage, ProjectMember
+from backend.app.models import User, Project, ProjectMember
 from backend.app import schemas
 from backend.app.services.rag import rag_service
 from backend.app.core.prompts import get_query_rewrite_prompt, get_rag_chatbot_system_prompt
@@ -26,30 +26,7 @@ except ImportError:
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
-@router.get("/history/{project_id}", response_model=List[schemas.ChatMessage])
-def get_chat_history(
-    project_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Retrieves the chronological history of the last 50 messages 
-    exchanged under a specific project to render on the chat UI.
-    """
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
 
-    if not current_user.is_admin:
-        is_owner = project.owner_id == current_user.id
-        is_member = db.query(ProjectMember).filter(
-            ProjectMember.project_id == project_id,
-            ProjectMember.user_id == current_user.id
-        ).first() is not None
-        if not is_owner and not is_member:
-            raise HTTPException(status_code=403, detail="You do not have access to this project's chat history.")
-
-    return []
 
 def _clean_chat_inputs(inputs: dict) -> dict:
     cleaned = dict(inputs)
@@ -68,10 +45,7 @@ def chat_with_project(
     RAG Chatbot Endpoint with Conversational Memory.
     1. Scope search by project_id.
     2. Retrieve top-5 relevant chunks using pgvector (filtered by score threshold >= 0.30).
-    3. Save incoming user question to ChatMessage table.
-    4. Fetch the last 5 chat messages to inject history context.
-    5. Formulate prompt, call OpenRouter API in streaming mode, and stream tokens via SSE.
-    6. Accumulate tokens and write the final AI assistant response to the ChatMessage table.
+    6. Accumulate tokens and return the final AI assistant response.
     """
     project = db.query(Project).filter(Project.id == request.project_id).first()
     if not project:

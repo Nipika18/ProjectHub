@@ -20,7 +20,6 @@ class User(Base):
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="uploader")
     logs = relationship("ActivityLog", back_populates="user")
-    chat_messages = relationship("ChatMessage", back_populates="user")
     memberships = relationship("ProjectMember", back_populates="user", cascade="all, delete-orphan")
     assigned_tasks = relationship("Task", back_populates="assignee", foreign_keys="Task.assigned_to")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
@@ -39,7 +38,6 @@ class Project(Base):
     owner = relationship("User", back_populates="projects")
     milestones = relationship("Milestone", back_populates="project", cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="project", cascade="all, delete-orphan")
-    chat_messages = relationship("ChatMessage", back_populates="project", cascade="all, delete-orphan")
     user_stories = relationship("UserStory", back_populates="project", cascade="all, delete-orphan")
     members = relationship("ProjectMember", back_populates="project", cascade="all, delete-orphan")
 
@@ -129,21 +127,6 @@ class ActivityLog(Base):
 
     # Relationships
     user = relationship("User", back_populates="logs")
-
-
-class ChatMessage(Base):
-    __tablename__ = "chat_messages"
-
-    id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    role = Column(String, nullable=False)  # "user" or "assistant"
-    content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-
-    # Relationships
-    project = relationship("Project", back_populates="chat_messages")
-    user = relationship("User", back_populates="chat_messages")
 
 
 class UserStory(Base):
