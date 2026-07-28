@@ -375,32 +375,7 @@
                     <!-- Populated dynamically -->
                 </div>
 
-                <!-- Create Project Modal Drawer -->
-                <div id="create-project-modal" class="modal-overlay">
-                    <div class="modal-glass">
-                        <div class="modal-header">
-                            <h3>Create New Project</h3>
-                            <button class="modal-close" id="btn-close-project-modal"><i data-lucide="x"></i></button>
-                        </div>
-                        <form id="create-project-form">
-                            <div class="form-group">
-                                <label for="project-name">Project Title</label>
-                                <input type="text" id="project-name" required placeholder="e.g. Website Overhaul 2026">
-                            </div>
-                            <div class="form-group">
-                                <label for="project-desc">Description</label>
-                                <textarea id="project-desc" rows="4"
-                                    placeholder="Brief outline of the project objectives and contents..."></textarea>
-                            </div>
-                            <div class="modal-actions">
-                                <button type="button" class="btn btn-secondary"
-                                    id="btn-cancel-project-modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Create Project</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
+                
                 <!-- Project Detail View Container (Embedded Dynamic Page) -->
                 <div id="project-detail-view" class="project-details-panel glass-panel hidden">
                     <div class="detail-header">
@@ -542,44 +517,7 @@
                     </div>
                 </div>
 
-                <!-- Create Milestone Modal Drawer -->
-                <div id="create-milestone-modal" class="modal-overlay">
-                    <div class="modal-glass">
-                        <div class="modal-header">
-                            <h3>Create New Milestone</h3>
-                            <button class="modal-close" id="btn-close-milestone-modal"><i data-lucide="x"></i></button>
-                        </div>
-                        <form id="create-milestone-form">
-                            <!-- Target Project hidden: auto-filled from global Active Project -->
-                            <div class="form-group" style="display: none;">
-                                <label for="milestone-project-id">Target Project</label>
-                                <select id="milestone-project-id" required class="form-select">
-                                    <!-- Populated dynamically -->
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="milestone-title">Milestone Title</label>
-                                <input type="text" id="milestone-title" required
-                                    placeholder="e.g. MVP Launch / Review Phase">
-                            </div>
-                            <div class="form-group">
-                                <label for="milestone-desc">Description</label>
-                                <textarea id="milestone-desc" rows="3"
-                                    placeholder="Define deliverables for this milestone..."></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="milestone-due">Due Date</label>
-                                <input type="date" id="milestone-due" required>
-                            </div>
-                            <div class="modal-actions">
-                                <button type="button" class="btn btn-secondary"
-                                    id="btn-cancel-milestone-modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Create Milestone</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </section>
+                            </section>
 
             <!-- Page 4: Document Uploads -->
             <section id="section-uploads" class="content-section">
@@ -649,7 +587,7 @@
                                 <div id="progress-bar-fill" class="progress-bar-fill"></div>
                             </div>
                             <div class="progress-status" id="upload-status-text">
-                                <i data-lucide="loader" class="spin"></i> Indexing text into vectors... Please wait.
+                                <i data-lucide="loader" class="spin"></i> Uploading and processing document... Please wait.
                             </div>
                         </div>
                     </div>
@@ -786,8 +724,8 @@
                         <select id="story-project-select" class="form-select" style="display: none !important;">
                             <option value="">Select a Project...</option>
                         </select>
-                        <button class="btn btn-secondary" id="btn-open-create-story-modal" title="Manually create a custom user story">
-                            <i data-lucide="plus"></i> Add Story
+                        <button id="btn-open-create-story-modal" title="Manually create a custom user story" style="display: inline-flex; align-items: center; gap: 6px; background: #0ea5e9; border: none; color: #000000; font-weight: 700; cursor: pointer; padding: 10px 16px; border-radius: 8px; font-size: 0.95rem; transition: background 0.2s;" onmouseover="this.style.background='#0284c7'" onmouseout="this.style.background='#0ea5e9'">
+                            <i data-lucide="plus" style="width: 18px; height: 18px; color: #000000;"></i> Create
                         </button>
                         <button class="btn btn-primary" id="btn-generate-stories" title="Generate User Stories from all project documents using AI">
                             <i data-lucide="sparkles"></i> Generate Stories with AI
@@ -980,108 +918,8 @@
                     </div>
                     <!-- Jira Table Footer -->
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.85rem; color: var(--color-text-muted);">
-                        <button type="button" onclick="document.getElementById('btn-open-create-story-modal').click()" style="display: inline-flex; align-items: center; gap: 6px; background: transparent; border: none; color: var(--color-text-main); font-weight: 600; cursor: pointer; padding: 4px 8px; border-radius: 4px;">
-                            <i data-lucide="plus" style="width: 16px; height: 16px; color: var(--color-primary);"></i> Create
-                        </button>
+                        <div></div>
                         <span id="jira-list-footer-count" style="font-weight: 600;">1 of 1</span>
-                    </div>
-                </div>
-
-                <!-- Create Manual Story / Task Modal -->
-                <div id="create-story-modal" class="modal-overlay">
-                    <div class="modal-glass" style="max-width: 560px; max-height: 90vh; overflow-y: auto; padding: 24px 28px; border-radius: 12px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05);">
-                        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0;">
-                            <h3 id="modal-create-issue-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Create Issue</h3>
-                            <button class="modal-close" id="btn-close-story-modal" style="background: transparent; border: none; color: #64748b; cursor: pointer; padding: 4px; display: flex; align-items: center;"><i data-lucide="x"></i></button>
-                        </div>
-                        <form id="create-story-form">
-                            <!-- Top Grid: Issue Type & Priority -->
-                            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-                                <div style="flex: 1;">
-                                    <label for="create-issue-type-select" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Issue Type</label>
-                                    <select id="create-issue-type-select" class="form-select" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
-                                        <option value="story" selected>User Story</option>
-                                        <option value="subtask">Subtask / Task</option>
-                                    </select>
-                                </div>
-                                <div style="flex: 1;">
-                                    <label for="story-priority-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Priority</label>
-                                    <select id="story-priority-input" class="form-select" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
-                                        <option value="Critical">Critical</option>
-                                        <option value="High">High</option>
-                                        <option selected value="Medium">Medium</option>
-                                        <option value="Low">Low</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Parent Story (Subtask Only) -->
-                            <div class="form-group" id="subtask-parent-group" style="display: none; margin-bottom: 16px;">
-                                <label for="subtask-parent-story-select" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Parent User Story <span style="color: #ef4444;">*</span></label>
-                                <select id="subtask-parent-story-select" class="form-select" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
-                                    <option value="">-- Select Parent User Story --</option>
-                                </select>
-                            </div>
-
-                            <!-- Task Role / Type (Subtask Only) -->
-                            <div class="form-group" id="subtask-role-group" style="display: none; margin-bottom: 16px;">
-                                <label for="subtask-role-select" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Task Role / Type</label>
-                                <select id="subtask-role-select" class="form-select" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
-                                    <option value="Backend" selected>Backend</option>
-                                    <option value="Frontend">Frontend</option>
-                                    <option value="AI">AI</option>
-                                    <option value="QA">QA</option>
-                                    <option value="Manager">Manager</option>
-                                    <option value="DevOps">DevOps</option>
-                                </select>
-                            </div>
-
-                            <!-- Title Field -->
-                            <div class="form-group" style="margin-bottom: 16px;">
-                                <label for="story-title-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Title <span style="color: #ef4444;">*</span></label>
-                                <input type="text" id="story-title-input" required placeholder="As a [user], I want to [action]..." style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; box-sizing: border-box;">
-                            </div>
-
-                            <!-- Description (Story Only) -->
-                            <div class="form-group story-only-field" style="margin-bottom: 16px;">
-                                <label for="story-desc-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Description</label>
-                                <textarea id="story-desc-input" rows="3" placeholder="Additional context..." style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; box-sizing: border-box; resize: vertical;"></textarea>
-                            </div>
-
-                            <!-- Acceptance Criteria (Story Only) -->
-                            <div class="form-group story-only-field" style="margin-bottom: 16px;">
-                                <label for="story-ac-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Acceptance Criteria <span style="font-weight: 400; color: #64748b;">(One per line)</span></label>
-                                <textarea id="story-ac-input" rows="2" placeholder="Criterion 1&#10;Criterion 2" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; box-sizing: border-box; resize: vertical;"></textarea>
-                            </div>
-
-                            <!-- Story Points (Story Only) -->
-                            <div class="story-only-field" style="display: flex; gap: 16px; margin-bottom: 16px;">
-                                <div style="flex: 1;">
-                                    <label for="story-points-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Story Points</label>
-                                    <select id="story-points-input" class="form-select" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
-                                        <option value="1">1 Point</option>
-                                        <option value="2">2 Points</option>
-                                        <option selected value="3">3 Points</option>
-                                        <option value="5">5 Points</option>
-                                        <option value="8">8 Points</option>
-                                        <option value="13">13 Points</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Subtasks Batch Textarea (Story Only) -->
-                            <div class="form-group story-only-field" style="margin-bottom: 20px;">
-                                <label for="story-subtasks-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Initial Subtasks <span style="font-weight: 400; color: #64748b;">(Optional, one per line)</span></label>
-                                <textarea id="story-subtasks-input" rows="2" placeholder="Design UI components [Frontend]&#10;Implement API endpoint [Backend]" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; box-sizing: border-box; resize: vertical;"></textarea>
-                                <small style="color: #64748b; font-size: 11px; margin-top: 4px; display: block;">Format: <code>Task Title [Role]</code> e.g. <code>Setup API [Backend]</code>. Roles: Frontend, Backend, AI, QA, Manager.</small>
-                            </div>
-
-                            <!-- Actions -->
-                            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #f1f5f9;">
-                                <button type="button" class="btn btn-secondary" id="btn-cancel-story-modal" style="padding: 9px 18px; font-size: 0.9rem; font-weight: 500; border-radius: 8px; cursor: pointer; border: 1px solid #cbd5e1; background: #ffffff; color: #334155;">Cancel</button>
-                                <button type="submit" class="btn btn-primary" id="btn-submit-create-issue" style="padding: 9px 22px; font-size: 0.9rem; font-weight: 600; border-radius: 8px; cursor: pointer; border: none; background: #0ea5e9; color: #ffffff; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">Save Story</button>
-                            </div>
-                        </form>
                     </div>
                 </div>
             </section>
@@ -1159,6 +997,169 @@
         </main>
     </div>
 
+    <!-- Create Project Modal Drawer -->
+                <div id="create-project-modal" class="modal-overlay">
+                    <div class="modal-glass">
+                        <div class="modal-header">
+                            <h3>Create New Project</h3>
+                            <button class="modal-close" id="btn-close-project-modal"><i data-lucide="x"></i></button>
+                        </div>
+                        <form id="create-project-form">
+                            <div class="form-group">
+                                <label for="project-name">Project Title</label>
+                                <input type="text" id="project-name" required placeholder="e.g. Website Overhaul 2026">
+                            </div>
+                            <div class="form-group">
+                                <label for="project-desc">Description</label>
+                                <textarea id="project-desc" rows="4"
+                                    placeholder="Brief outline of the project objectives and contents..."></textarea>
+                            </div>
+                            <div class="modal-actions">
+                                <button type="button" class="btn btn-secondary"
+                                    id="btn-cancel-project-modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Create Project</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+    <!-- Create Milestone Modal Drawer -->
+                <div id="create-milestone-modal" class="modal-overlay">
+                    <div class="modal-glass">
+                        <div class="modal-header">
+                            <h3>Create New Milestone</h3>
+                            <button class="modal-close" id="btn-close-milestone-modal"><i data-lucide="x"></i></button>
+                        </div>
+                        <form id="create-milestone-form">
+                            <!-- Target Project hidden: auto-filled from global Active Project -->
+                            <div class="form-group" style="display: none;">
+                                <label for="milestone-project-id">Target Project</label>
+                                <select id="milestone-project-id" required class="form-select">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="milestone-title">Milestone Title</label>
+                                <input type="text" id="milestone-title" required
+                                    placeholder="e.g. MVP Launch / Review Phase">
+                            </div>
+                            <div class="form-group">
+                                <label for="milestone-desc">Description</label>
+                                <textarea id="milestone-desc" rows="3"
+                                    placeholder="Define deliverables for this milestone..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="milestone-due">Due Date</label>
+                                <input type="date" id="milestone-due" required>
+                            </div>
+                            <div class="modal-actions">
+                                <button type="button" class="btn btn-secondary"
+                                    id="btn-cancel-milestone-modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Create Milestone</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+    <!-- Create Manual Story / Task Modal -->
+                <div id="create-story-modal" class="modal-overlay">
+                    <div class="modal-glass" style="max-width: 560px; max-height: 90vh; overflow-y: auto; padding: 24px 28px; border-radius: 12px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05);">
+                        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0;">
+                            <h3 id="modal-create-issue-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Create Issue</h3>
+                            <button class="modal-close" id="btn-close-story-modal" style="background: transparent; border: none; color: #64748b; cursor: pointer; padding: 4px; display: flex; align-items: center;"><i data-lucide="x"></i></button>
+                        </div>
+                        <form id="create-story-form">
+                            <!-- Top Grid: Issue Type & Priority -->
+                            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                                <div style="flex: 1;">
+                                    <label for="create-issue-type-select" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Issue Type</label>
+                                    <select id="create-issue-type-select" class="form-select" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
+                                        <option value="story" selected>User Story</option>
+                                        <option value="subtask">Subtask / Task</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1;">
+                                    <label for="story-priority-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Priority</label>
+                                    <select id="story-priority-input" class="form-select" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
+                                        <option value="Critical">Critical</option>
+                                        <option value="High">High</option>
+                                        <option selected value="Medium">Medium</option>
+                                        <option value="Low">Low</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                
+                            <!-- Parent Story (Subtask Only) -->
+                            <div class="form-group" id="subtask-parent-group" style="display: none; margin-bottom: 16px;">
+                                <label for="subtask-parent-story-select" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Parent User Story <span style="color: #ef4444;">*</span></label>
+                                <select id="subtask-parent-story-select" class="form-select" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
+                                    <option value="">-- Select Parent User Story --</option>
+                                </select>
+                            </div>
+
+                            <!-- Task Role / Type (Subtask Only) -->
+                            <div class="form-group" id="subtask-role-group" style="display: none; margin-bottom: 16px;">
+                                <label for="subtask-role-select" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Task Role / Type</label>
+                                <select id="subtask-role-select" class="form-select" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
+                                    <option value="Backend" selected>Backend</option>
+                                    <option value="Frontend">Frontend</option>
+                                    <option value="AI">AI</option>
+                                    <option value="QA">QA</option>
+                                    <option value="Manager">Manager</option>
+                                    <option value="DevOps">DevOps</option>
+                                </select>
+                            </div>
+
+                            <!-- Title Field -->
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label for="story-title-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Title <span style="color: #ef4444;">*</span></label>
+                                <input type="text" id="story-title-input" required placeholder="As a [user], I want to [action]..." style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; box-sizing: border-box;">
+                            </div>
+
+                            <!-- Description (Story Only) -->
+                            <div class="form-group story-only-field" style="margin-bottom: 16px;">
+                                <label for="story-desc-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Description</label>
+                                <textarea id="story-desc-input" rows="3" placeholder="Additional context..." style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; box-sizing: border-box; resize: vertical;"></textarea>
+                            </div>
+
+                            <!-- Acceptance Criteria (Story Only) -->
+                            <div class="form-group story-only-field" style="margin-bottom: 16px;">
+                                <label for="story-ac-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Acceptance Criteria <span style="font-weight: 400; color: #64748b;">(One per line)</span></label>
+                                <textarea id="story-ac-input" rows="2" placeholder="Criterion 1&#10;Criterion 2" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; box-sizing: border-box; resize: vertical;"></textarea>
+                            </div>
+
+                            <!-- Story Points (Story Only) -->
+                            <div class="story-only-field" style="display: flex; gap: 16px; margin-bottom: 16px;">
+                                <div style="flex: 1;">
+                                    <label for="story-points-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Story Points</label>
+                                    <select id="story-points-input" class="form-select" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a;">
+                                        <option value="1">1 Point</option>
+                                        <option value="2">2 Points</option>
+                                        <option selected value="3">3 Points</option>
+                                        <option value="5">5 Points</option>
+                                        <option value="8">8 Points</option>
+                                        <option value="13">13 Points</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Subtasks Batch Textarea (Story Only) -->
+                            <div class="form-group story-only-field" style="margin-bottom: 20px;">
+                                <label for="story-subtasks-input" style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; display: block;">Initial Subtasks <span style="font-weight: 400; color: #64748b;">(Optional, one per line)</span></label>
+                                <textarea id="story-subtasks-input" rows="2" placeholder="Design UI components [Frontend]&#10;Implement API endpoint [Backend]" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; box-sizing: border-box; resize: vertical;"></textarea>
+                                <small style="color: #64748b; font-size: 11px; margin-top: 4px; display: block;">Format: <code>Task Title [Role]</code> e.g. <code>Setup API [Backend]</code>. Roles: Frontend, Backend, AI, QA, Manager.</small>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #f1f5f9;">
+                                <button type="button" class="btn btn-secondary" id="btn-cancel-story-modal" style="padding: 9px 18px; font-size: 0.9rem; font-weight: 500; border-radius: 8px; cursor: pointer; border: 1px solid #cbd5e1; background: #ffffff; color: #334155;">Cancel</button>
+                                <button type="submit" class="btn btn-primary" id="btn-submit-create-issue" style="padding: 9px 22px; font-size: 0.9rem; font-weight: 600; border-radius: 8px; cursor: pointer; border: none; background: #0ea5e9; color: #ffffff; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">Save Story</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
     <!-- Invite User Modal (Root Level for Global Access) -->
     <div id="invite-user-modal" class="modal-overlay">
         <div class="modal-glass">
@@ -1227,10 +1228,21 @@
             </p>
             <form id="assign-admin-form">
                 <div class="form-group">
-                    <label for="assign-admin-select">Select Registered User <span style="color: #ef4444;">*</span></label>
-                    <select id="assign-admin-select" required class="form-select" style="width: 100%;">
-                        <option value="">Loading users...</option>
-                    </select>
+                    <label>Select Registered User <span style="color: #ef4444;">*</span></label>
+                    <div class="custom-search-select" id="assign-admin-custom-select" style="position: relative;">
+                        <input type="hidden" id="assign-admin-select" required>
+                        <div class="form-select" id="assign-admin-trigger" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: var(--color-bg-light);">
+                            <span id="assign-admin-display" style="color: var(--color-text-muted);">-- Select Registered User --</span>
+                            <i data-lucide="chevron-down" style="width: 16px; height: 16px; color: var(--color-text-muted);"></i>
+                        </div>
+                        <div id="assign-admin-dropdown" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; margin-top: 4px; z-index: 50; box-shadow: var(--shadow-premium);">
+                            <input type="text" id="assign-admin-search" placeholder="Search by name or email..." style="width: calc(100% - 16px); margin: 8px; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-base); color: var(--color-text-main); outline: none;">
+                            <div id="assign-admin-options" style="max-height: 200px; overflow-y: auto;">
+                                <!-- Options populated by JS -->
+                                <div style="padding: 10px 14px; color: var(--color-text-muted);">Loading users...</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="assign-admin-action">Action <span style="color: #ef4444;">*</span></label>
@@ -1352,7 +1364,7 @@
     </div>
 
     <!-- Page loading script -->
-    <script src="js/app.js?v=2.18"></script>
+    <script src="js/app.js?v=2.21"></script>
 </body>
 
 </html>

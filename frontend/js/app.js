@@ -768,14 +768,25 @@ function checkAdminAccess(actionName = "do that") {
     const isAdmin = !!state.user?.is_admin;
 
     // Actions that are strictly global admin only
-    const globalAdminActions = [
-        "invite users",
-        "assign administrator privileges",
-        "assign admin",
+    const strictGlobalAdminActions = [
         "purge orphans",
         "view admin logs"
     ];
-    if (globalAdminActions.includes(actionName.toLowerCase())) {
+    if (strictGlobalAdminActions.includes(actionName.toLowerCase())) {
+        if (!isAdmin) {
+            showToast(`Only Global Administrators can ${actionName}`, "error");
+            return false;
+        }
+        return true;
+    }
+
+    // Actions that allow ANY project manager
+    const anyManagerActions = [
+        "invite users",
+        "assign administrator privileges",
+        "assign admin"
+    ];
+    if (anyManagerActions.includes(actionName.toLowerCase())) {
         const isAnyProjManager = state.projects?.some(p => p.user_role === 'Manager' || p.user_role === 'Admin');
         if (!isAdmin && !isAnyProjManager) {
             showToast(`Only Admin or Manager can ${actionName}`, "error");
@@ -1550,7 +1561,7 @@ window.deleteDocumentDirect = async function (documentId, triggerBtn) {
     
     showConfirmModal(
         "Delete Document?",
-        "This will remove the file from local storage and purge its semantic vectors from pgvector!",
+        "This will permanently delete the file and remove it from the system.",
         "Delete Document",
         async () => {
             // Optimistic UI: fade-out the table row immediately
@@ -1567,7 +1578,7 @@ window.deleteDocumentDirect = async function (documentId, triggerBtn) {
                     headers: { "Authorization": `Bearer ${state.token}` }
                 });
                 if (!res.ok) throw new Error("Failed to delete document.");
-                showToast("File and vectors purged.");
+                showToast("File deleted successfully.");
                 if (state.currentProject) {
                     loadProjectDetailDocuments(state.currentProject.id);
                 }
@@ -1792,6 +1803,12 @@ function bindMilestoneEvents() {
         const title = document.getElementById("milestone-title").value;
         const description = document.getElementById("milestone-desc").value;
         const due_date = document.getElementById("milestone-due").value;
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Creating...";
+        }
 
         try {
             const res = await fetch(`${API_BASE}/api/milestones`, {
@@ -1826,6 +1843,11 @@ function bindMilestoneEvents() {
             loadWorkspaceData();
         } catch (e) {
             showToast(e.message, "error");
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Create Milestone";
+            }
         }
     });
 }
@@ -2068,14 +2090,14 @@ async function handleFileUpload(file) {
         fill.style.width = "100%";
         percentLabel.textContent = "100%";
         statusLabel.className = "progress-status success";
-        statusLabel.innerHTML = '<i data-lucide="check-circle"></i> Indexing complete! Document chunks stored in pgvector.';
+        statusLabel.innerHTML = '<i data-lucide="check-circle"></i> Documents uploaded';
 
         // Build nav link action based on whether we're inside a project
         const uploadedProjectId = parseInt(document.getElementById("upload-project-id")?.value);
         if (uploadedProjectId && state.projects) {
             const targetProject = state.projects.find(p => p.id === uploadedProjectId);
             showToast(
-                "Document uploaded and indexed successfully!",
+                "Document uploaded successfully!",
                 "success",
                 "View in Documents",
                 `#projects/${uploadedProjectId}`,
@@ -2087,7 +2109,7 @@ async function handleFileUpload(file) {
                 }
             );
         } else {
-            showToast("Document indexed and vectorized successfully!", "success");
+            showToast("Document uploaded successfully!", "success");
         }
 
         loadWorkspaceData(); // Refresh Stats
@@ -2973,6 +2995,26 @@ if (btnOpenStoryModal) btnOpenStoryModal.addEventListener("click", async () => {
 if (btnCloseStoryModal) btnCloseStoryModal.addEventListener("click", () => storyModal.classList.remove("active"));
 if (btnCancelStoryModal) btnCancelStoryModal.addEventListener("click", () => storyModal.classList.remove("active"));
 
+window.openSubtaskModal = async function(projectId, storyId) {
+    if (!checkAdminAccess("create tasks")) return;
+    if (!projectId) return;
+
+    // Reset form
+    if (storyForm) storyForm.reset();
+
+    await populateParentStorySelect(projectId);
+    
+    if (issueTypeSelect) issueTypeSelect.value = "subtask";
+    updateIssueTypeFields();
+    
+    const parentSelect = document.getElementById("subtask-parent-story-select");
+    if (parentSelect) {
+        parentSelect.value = storyId;
+    }
+
+    storyModal.classList.add("active");
+};
+
 if (storyForm) storyForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!checkAdminAccess("create user stories")) return;
@@ -3352,25 +3394,97 @@ async function triggerOpenAssignAdminModal(e) {
     if (e) e.preventDefault();
     if (!checkAdminAccess("assign administrator privileges")) return;
 
-    const selectEl = document.getElementById("assign-admin-select");
-    if (selectEl) {
-        selectEl.innerHTML = '<option value="">Loading users...</option>';
+    const triggerEl = document.getElementById("assign-admin-trigger");
+    const dropdownEl = document.getElementById("assign-admin-dropdown");
+    const optionsEl = document.getElementById("assign-admin-options");
+    const searchEl = document.getElementById("assign-admin-search");
+    const hiddenInput = document.getElementById("assign-admin-select");
+    const displayEl = document.getElementById("assign-admin-display");
+    
+    if (searchEl) searchEl.value = "";
+    if (hiddenInput) hiddenInput.value = "";
+    if (displayEl) displayEl.textContent = "-- Select Registered User --";
+    if (displayEl) displayEl.style.color = "var(--color-text-muted)";
+    if (dropdownEl) dropdownEl.style.display = "none";
+    
+    if (triggerEl && !triggerEl.dataset.bound) {
+        triggerEl.addEventListener("click", () => {
+            const isVisible = dropdownEl.style.display === "block";
+            dropdownEl.style.display = isVisible ? "none" : "block";
+            if (!isVisible && searchEl) {
+                setTimeout(() => searchEl.focus(), 50);
+            }
+        });
+        
+        document.addEventListener("click", (e) => {
+            const container = document.getElementById("assign-admin-custom-select");
+            if (container && !container.contains(e.target)) {
+                if (dropdownEl) dropdownEl.style.display = "none";
+            }
+        });
+        triggerEl.dataset.bound = "true";
+    }
+
+    if (optionsEl) {
+        optionsEl.innerHTML = '<div style="padding: 10px 14px; color: var(--color-text-muted);">Loading users...</div>';
         try {
             const res = await fetch(`${API_BASE}/api/auth/users`, {
                 headers: { "Authorization": `Bearer ${state.token}` }
             });
             if (!res.ok) throw new Error("Could not fetch users list");
             const users = await res.json();
-            selectEl.innerHTML = '<option value="">-- Select Registered User --</option>';
-            users.forEach(u => {
-                const opt = document.createElement("option");
-                opt.value = u.id;
-                const adminTag = u.is_admin ? " [ADMIN]" : "";
-                opt.textContent = `${u.full_name} (${u.email})${adminTag}`;
-                selectEl.appendChild(opt);
-            });
+            
+            window.renderAdminSelect = (filterText = "") => {
+                optionsEl.innerHTML = '';
+                const lowerFilter = filterText.toLowerCase();
+                let hasResults = false;
+                
+                users.forEach(u => {
+                    const adminTag = u.is_admin ? " [ADMIN]" : "";
+                    const textContent = `${u.full_name} (${u.email})${adminTag}`;
+                    if (textContent.toLowerCase().includes(lowerFilter)) {
+                        hasResults = true;
+                        const opt = document.createElement("div");
+                        opt.textContent = textContent;
+                        opt.style.padding = "10px 14px";
+                        opt.style.borderBottom = "1px solid var(--border-color)";
+                        opt.style.cursor = "pointer";
+                        opt.style.fontSize = "14px";
+                        opt.style.transition = "var(--transition-fast)";
+                        
+                        opt.addEventListener("mouseenter", () => {
+                            opt.style.backgroundColor = "var(--color-primary-glow)";
+                            opt.style.color = "var(--color-primary)";
+                        });
+                        opt.addEventListener("mouseleave", () => {
+                            opt.style.backgroundColor = "transparent";
+                            opt.style.color = "var(--color-text-main)";
+                        });
+                        
+                        opt.addEventListener("click", () => {
+                            hiddenInput.value = u.id;
+                            displayEl.textContent = textContent;
+                            displayEl.style.color = "var(--color-text-main)";
+                            dropdownEl.style.display = "none";
+                        });
+                        optionsEl.appendChild(opt);
+                    }
+                });
+                
+                if (!hasResults) {
+                    optionsEl.innerHTML = '<div style="padding: 10px 14px; color: var(--color-text-muted);">No users found.</div>';
+                }
+            };
+            window.renderAdminSelect();
+
+            if (searchEl && !searchEl.dataset.bound) {
+                searchEl.addEventListener("input", (e) => {
+                    window.renderAdminSelect(e.target.value);
+                });
+                searchEl.dataset.bound = "true";
+            }
         } catch (err) {
-            selectEl.innerHTML = '<option value="">Error loading users</option>';
+            optionsEl.innerHTML = `<div style="padding: 10px 14px; color: var(--color-danger);">${err.message}</div>`;
             showToast(err.message, "error");
         }
     }
@@ -3688,8 +3802,10 @@ function applyStoriesFilters() {
         const matchesPriority = !priority || story.priority === priority;
         let matchesAssignee = true;
         if (state.storyAssigneeFilter === "mine") {
-            const hasMyTask = (story.tasks || []).some(t => t.assigned_to === state.user?.id);
-            matchesAssignee = hasMyTask;
+            const myUserName = state.user?.full_name || "Unassigned";
+            const isStoryAssignedToMe = story.assignee === myUserName;
+            const hasMyTask = (story.tasks || []).some(t => t.assigned_to && t.assigned_to === state.user?.id);
+            matchesAssignee = hasMyTask || isStoryAssignedToMe;
         }
         return matchesQuery && matchesPriority && matchesAssignee;
     }).sort((a, b) => {
@@ -4120,19 +4236,8 @@ function renderStoryDetail(projectId, story) {
                         ${tasksList || '<div style="color: var(--color-text-muted); font-size: 0.9rem; font-style: italic; margin-bottom: 10px;">No subtasks yet. Create a subtask below.</div>'}
                     </div>
                     ${isAdmin ? `
-                    <div style="display: flex; gap: 8px; margin-top: 12px; align-items: center; background: var(--bg-body); border: 1px dashed var(--border-color); padding: 10px 14px; border-radius: 8px; flex-wrap: wrap;">
-                        <input type="text" id="new-task-title-${story.id}" placeholder="What needs to be done?" style="flex-grow: 1; min-width: 180px; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--color-text-main); font-size: 0.9rem;">
-                        <select id="new-task-type-${story.id}" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--color-text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer;" onchange="if(this.value.startsWith('custom_')) window.promptCustomRole(this);">
-                            <option value="Frontend">Frontend</option>
-                            <option value="Backend" selected>Backend</option>
-                            <option value="AI">AI</option>
-                            <option value="QA">QA</option>
-                            <option value="Manager">Manager</option>
-                            <option disabled>──────────</option>
-                            <option value="custom_add_new" style="font-weight: 700; color: #0ea5e9;">+ Add Custom Type...</option>
-                            <option value="custom_remove_role" style="font-weight: 700; color: #ef4444;">- Remove Custom Type...</option>
-                        </select>
-                        <button type="button" onclick="addStoryTask(${projectId}, ${story.id})" class="btn btn-primary btn-sm" style="display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; cursor: pointer; white-space: nowrap; font-weight: 600;">
+                    <div style="margin-top: 12px;">
+                        <button type="button" onclick="window.openSubtaskModal(${projectId}, ${story.id})" class="btn btn-secondary btn-sm" style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
                             <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Create Subtask
                         </button>
                     </div>
@@ -4658,8 +4763,7 @@ function renderStoriesListView(storiesList, projectId) {
         state.jiraListCollapsed = new Set(storiesList.map(s => String(s.id)));
         state.jiraListInitializedProject = projectId;
     }
-    const projKey = "PH0" + (projectId || "1");
-    let seqNumber = 1;
+    const projKey = getProjectKeyPrefix(projectId);
     let html = "";
     let totalRowsDisplayed = 0;
 
@@ -4824,19 +4928,17 @@ function renderStoriesListView(storiesList, projectId) {
 
         // Child subtasks (if parent not collapsed)
         if (!isCollapsed && tasks.length > 0) {
+            let subtaskIndex = 1;
             tasks.forEach(t => {
                 if (state.storyAssigneeFilter === "mine" && t.assigned_to !== state.user?.id) {
                     return;
                 }
-                const taskKey = `${projKey}-${seqNumber++}`;
-                // Subtask Assignee: default to story creator / logged-in user
-                const defaultAssigneeUser = members.find(m => m.user_name === currentUserName);
+                const taskKey = `${storyKey}-${subtaskIndex++}`;
+                // Subtask Assignee
                 const explicitAssignee = t.assigned_to ? members.find(m => m.user_id === t.assigned_to) : null;
-                const isAutoRoleAssignee = explicitAssignee && explicitAssignee.role === t.task_type && explicitAssignee.user_name !== currentUserName;
-                const effectiveAssigneeMember = (explicitAssignee && !isAutoRoleAssignee) ? explicitAssignee : defaultAssigneeUser;
-                const effectiveAssigneeId = effectiveAssigneeMember ? effectiveAssigneeMember.user_id : (state.user?.id || "");
-                const assigneeName = effectiveAssigneeMember ? effectiveAssigneeMember.user_name : currentUserName;
-                const initial = assigneeName ? assigneeName.charAt(0).toUpperCase() : "";
+                const assigneeName = explicitAssignee ? explicitAssignee.user_name : "Unassigned";
+                const effectiveAssigneeId = explicitAssignee ? explicitAssignee.user_id : "";
+                const initial = assigneeName !== "Unassigned" ? assigneeName.charAt(0).toUpperCase() : "";
 
                 const taskStatusVal = t.status || "To Do";
                 let tStatusBg = "#E2E8F0"; let tStatusText = "#475569";
@@ -4886,8 +4988,8 @@ function renderStoriesListView(storiesList, projectId) {
                         <!-- Assignee Dropdown -->
                         <td style="padding: 8px 14px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <span style="width: 20px; height: 20px; border-radius: 50%; background: ${effectiveAssigneeMember ? '#10B981' : '#E2E8F0'}; color: ${effectiveAssigneeMember ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700;">
-                                    ${effectiveAssigneeMember ? initial : '<i data-lucide="user" style="width: 11px; height: 11px;"></i>'}
+                                <span style="width: 20px; height: 20px; border-radius: 50%; background: ${explicitAssignee ? '#10B981' : '#E2E8F0'}; color: ${explicitAssignee ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700;">
+                                    ${explicitAssignee ? initial : '<i data-lucide="user" style="width: 11px; height: 11px;"></i>'}
                                 </span>
                                 <select ${isAdmin ? '' : 'disabled'} onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'assigned_to', this.value ? parseInt(this.value) : null)" style="background: transparent; border: none; font-size: 0.84rem; color: var(--color-text-main); cursor: pointer; outline: none;">
                                     <option value="">Unassigned</option>

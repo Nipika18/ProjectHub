@@ -2204,7 +2204,7 @@ h1, h2, h3, h4 {
     border-radius: var(--radius-md);
     padding: 16px 24px;
     box-shadow: var(--shadow-premium);
-    z-index: 1000;
+    z-index: 99999;
     font-weight: 500;
     transform: translateX(calc(100% + 40px));
     transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -2617,4 +2617,25 @@ h1, h2, h3, h4 {
 }
 .dark-theme .account-menu-item:hover {
     background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Custom styling for Assign Admin Listbox */
+#assign-admin-options {
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-primary) var(--bg-surface);
+}
+
+#assign-admin-options::-webkit-scrollbar {
+    width: 6px;
+}
+
+#assign-admin-options::-webkit-scrollbar-track {
+    background: var(--bg-surface);
+    border-radius: 6px;
+}
+
+#assign-admin-options::-webkit-scrollbar-thumb {
+    background-color: var(--color-primary);
+    border-radius: 6px;
 }

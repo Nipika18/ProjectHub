@@ -284,10 +284,27 @@ def invite_user(
 @router.get("/users", response_model=List[schemas.User])
 def list_all_users(
     db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin_user)
+    current_user: User = Depends(get_current_user)
 ):
-    """Admin-only endpoint to retrieve all registered workspace users."""
-    users = db.query(User).order_by(User.full_name.asc()).all()
+    """Admin and Manager endpoint to retrieve registered workspace users."""
+    if current_user.is_admin:
+        users = db.query(User).order_by(User.full_name.asc()).all()
+        return users
+        
+    manager_projects = db.query(ProjectMember.project_id).filter(
+        ProjectMember.user_id == current_user.id,
+        ProjectMember.role == "Manager"
+    ).all()
+    
+    if not manager_projects:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    project_ids = [p[0] for p in manager_projects]
+    
+    users = db.query(User).join(ProjectMember, User.id == ProjectMember.user_id).filter(
+        ProjectMember.project_id.in_(project_ids)
+    ).distinct().order_by(User.full_name.asc()).all()
+    
     return users
 
 
@@ -295,9 +312,9 @@ def list_all_users(
 def assign_admin_role(
     req: schemas.AdminAssignRequest,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin_user)
+    current_user: User = Depends(get_current_user)
 ):
-    """Admin-only endpoint to promote or demote a registered workspace user as Admin."""
+    """Endpoint to promote or demote a registered workspace user as Admin."""
     user = None
     if req.user_id:
         user = db.query(User).filter(User.id == req.user_id).first()
@@ -307,15 +324,39 @@ def assign_admin_role(
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
 
-    if user.id == current_admin.id and not req.is_admin:
+    if not current_user.is_admin:
+        manager_projects = db.query(ProjectMember.project_id).filter(
+            ProjectMember.user_id == current_user.id,
+            ProjectMember.role == "Manager"
+        ).all()
+        
+        if not manager_projects:
+            raise HTTPException(status_code=403, detail="Not authorized.")
+            
+        project_ids = [p[0] for p in manager_projects]
+        target_in_project = db.query(ProjectMember).filter(
+            ProjectMember.user_id == user.id,
+            ProjectMember.project_id.in_(project_ids)
+        ).first()
+        
+        if not target_in_project:
+            raise HTTPException(status_code=403, detail="You can only manage privileges for users in your projects.")
+
+    if user.id == current_user.id and not req.is_admin:
         raise HTTPException(status_code=400, detail="You cannot revoke your own administrator privileges.")
+
+    if user.is_admin == req.is_admin:
+        if req.is_admin:
+            raise HTTPException(status_code=400, detail=f"User '{user.full_name}' is already an Administrator.")
+        else:
+            raise HTTPException(status_code=400, detail=f"User '{user.full_name}' is not an Administrator.")
 
     user.is_admin = req.is_admin
     db.commit()
     db.refresh(user)
 
     action_text = "promoted to Administrator" if req.is_admin else "demoted from Administrator"
-    log_activity(db, current_admin.id, "assign_admin", f"Admin '{current_admin.full_name}' {action_text} user '{user.full_name}' ({user.email})")
+    log_activity(db, current_user.id, "assign_admin", f"User '{current_user.full_name}' {action_text} user '{user.full_name}' ({user.email})")
 
     return {
         "detail": f"User '{user.full_name}' has been {action_text} successfully.",
