@@ -216,8 +216,8 @@ def update_team_member(
         raise HTTPException(status_code=404, detail="Project not found")
 
     # Validate role
-    if request.role not in ["Frontend", "Backend", "AI", "Manager"]:
-        raise HTTPException(status_code=400, detail="Role must be 'Frontend', 'Backend', 'AI', or 'Manager'")
+    if request.role not in ["Frontend", "Backend", "AI", "QA", "Manager", "DevOps"]:
+        raise HTTPException(status_code=400, detail="Role must be 'Frontend', 'Backend', 'AI', 'QA', 'Manager', or 'DevOps'")
 
     member = db.query(ProjectMember).filter(
         ProjectMember.id == member_id,
@@ -320,6 +320,8 @@ def remove_team_member(
 my_tasks_router = APIRouter(prefix="/api/my-tasks", tags=["my-tasks"])
 
 
+from sqlalchemy import func
+
 @my_tasks_router.get("", response_model=List[schemas.MyTask])
 def get_my_tasks(
     db: Session = Depends(get_db),
@@ -329,11 +331,24 @@ def get_my_tasks(
     Returns all tasks assigned to the currently logged-in user across all projects.
     This powers the developer's personal task dashboard.
     """
-    # Perform an inner join on Task, UserStory, and Project in exactly 1 query to avoid N+1 database roundtrips.
-    results = db.query(Task, UserStory, Project).join(
+    story_seq_sq = db.query(
+        UserStory.id,
+        func.row_number().over(partition_by=UserStory.project_id, order_by=UserStory.id).label('seq')
+    ).subquery()
+
+    task_seq_sq = db.query(
+        Task.id,
+        func.row_number().over(partition_by=Task.story_id, order_by=Task.id).label('seq')
+    ).subquery()
+
+    results = db.query(Task, UserStory, Project, story_seq_sq.c.seq, task_seq_sq.c.seq).join(
         UserStory, Task.story_id == UserStory.id
     ).join(
         Project, UserStory.project_id == Project.id
+    ).join(
+        story_seq_sq, UserStory.id == story_seq_sq.c.id
+    ).join(
+        task_seq_sq, Task.id == task_seq_sq.c.id
     ).filter(
         Task.assigned_to == current_user.id
     ).order_by(
@@ -341,7 +356,7 @@ def get_my_tasks(
     ).all()
 
     result = []
-    for task, story, project in results:
+    for task, story, project, s_seq, t_seq in results:
         result.append(schemas.MyTask(
             id=task.id,
             title=task.title,
@@ -352,7 +367,9 @@ def get_my_tasks(
             story_title=story.title,
             project_id=project.id,
             project_name=project.name,
-            created_at=task.created_at
+            created_at=task.created_at,
+            story_seq=s_seq,
+            task_seq=t_seq
         ))
 
     return result

@@ -4104,7 +4104,7 @@ function renderStoryDetail(projectId, story) {
             ` : ''}
         </div>`).join("");
 
-    const tasksList = (story.tasks || []).map(t => {
+    const tasksList = (story.tasks || []).map((t, idx) => {
         let badgeBg = "#E0F2FE"; let badgeColor = "#0284C7";
         if (t.task_type === "Frontend") { badgeBg = "#FFEDD5"; badgeColor = "#C2410C"; }
         else if (t.task_type === "Backend") { badgeBg = "#DBEAFE"; badgeColor = "#1D4ED8"; }
@@ -4125,13 +4125,20 @@ function renderStoryDetail(projectId, story) {
             <option value="${m.user_id}" ${t.assigned_to === m.user_id ? 'selected' : ''}>${m.user_name}</option>
         `).join("");
 
+        const taskSeqText = formatStoryKey(story, projectId) + "-" + (idx + 1);
         return `
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 14px; margin-bottom: 8px;">
             <!-- Left: Subtask Type Badge + Title -->
             <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
-                <span style="font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;">
-                    ${t.task_type || 'Task'}
-                </span>
+                <span style="font-size: 0.75rem; color: var(--color-text-muted); font-weight: 700; flex-shrink: 0;">${taskSeqText}</span>
+                <select onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'task_type', this.value)" style="font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; border: none; outline: none; text-transform: uppercase; cursor: ${isAdmin ? 'pointer' : 'default'}; flex-shrink: 0; font-family: inherit;" ${isAdmin ? '' : 'disabled'}>
+                    <option value="Frontend" ${t.task_type === 'Frontend' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">Frontend</option>
+                    <option value="Backend" ${t.task_type === 'Backend' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">Backend</option>
+                    <option value="AI" ${t.task_type === 'AI' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">AI</option>
+                    <option value="QA" ${t.task_type === 'QA' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">QA</option>
+                    <option value="Manager" ${t.task_type === 'Manager' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">Manager</option>
+                    <option value="DevOps" ${t.task_type === 'DevOps' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">DevOps</option>
+                </select>
                 <input type="text" value="${(t.title || '').replace(/"/g, '&quot;')}" onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'title', this.value)" style="flex: 1; background: transparent; border: none; font-size: 0.95rem; font-weight: 500; color: var(--color-text-main); outline: none; text-overflow: ellipsis;" ${isAdmin ? '' : 'readonly'}>
             </div>
             <!-- Right: Assignee, Status, Delete -->
@@ -5862,6 +5869,24 @@ function createMyTaskCard(task) {
         card.style.boxShadow = 'none';
     };
 
+    card.onclick = (e) => {
+        if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT' || e.target.closest('select')) {
+            return;
+        }
+        
+        state.globalProjectId = task.project_id;
+        localStorage.setItem("globalProjectId", task.project_id);
+        
+        const globalSelect = document.getElementById("global-project-select");
+        if (globalSelect) globalSelect.value = task.project_id;
+        
+        const storySelect = document.getElementById("story-project-select");
+        if (storySelect) storySelect.value = task.project_id;
+        
+        state.selectedStoryId = task.story_id;
+        window.location.hash = "stories";
+    };
+
     card.draggable = true;
     card.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData("text/plain", JSON.stringify({
@@ -5883,7 +5908,7 @@ function createMyTaskCard(task) {
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
             <span style="font-size: 0.7rem; padding: 3px 8px; border-radius: 8px; font-weight: 600; background: ${typeColor}22; color: ${typeColor}; text-transform: uppercase;">${task.task_type}</span>
-            <span style="font-size: 0.75rem; color: var(--color-text-muted);">${task.project_name}</span>
+            <span style="font-size: 0.75rem; color: var(--color-text-muted); font-weight: 600; letter-spacing: 0.5px;">${getProjectKeyPrefix(task.project_id)}-${task.story_seq || task.story_id}-${task.task_seq || task.id}</span>
         </div>
         <div style="margin-top: 4px;">
             <select onchange="updateMyTaskStatus(${task.project_id}, ${task.story_id}, ${task.id}, this.value)" 

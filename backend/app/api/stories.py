@@ -144,7 +144,7 @@ def generate_stories_from_documents(
             subtasks = s_data.get("subtasks", [])
             for t_data in subtasks:
                 task_type = t_data.get("type", "Backend")
-                if task_type not in ["Frontend", "Backend", "AI", "Manager"]:
+                if task_type not in ["Frontend", "Backend", "AI", "QA", "Manager", "DevOps"]:
                     task_type = "Manager"
                     
                 new_task = Task(
@@ -254,7 +254,7 @@ def generate_stories_from_single_document(
             subtasks = s_data.get("subtasks", [])
             for t_data in subtasks:
                 task_type = t_data.get("type", "Backend")
-                if task_type not in ["Frontend", "Backend", "AI", "Manager"]:
+                if task_type not in ["Frontend", "Backend", "AI", "QA", "Manager", "DevOps"]:
                     task_type = "Manager"
 
                 new_task = Task(
@@ -504,19 +504,28 @@ def update_task(
         task.status = request.status
     if "task_type" in request.model_fields_set:
         task.task_type = request.task_type
+        if "assigned_to" not in request.model_fields_set:
+            member_with_role = db.query(ProjectMember).filter(
+                ProjectMember.project_id == project_id,
+                ProjectMember.role == request.task_type
+            ).first()
+            if member_with_role:
+                task.assigned_to = member_with_role.user_id
+
     if "assigned_to" in request.model_fields_set:
         task.assigned_to = request.assigned_to
-        if task.assigned_to != old_assignee and task.assigned_to:
-            project = db.query(Project).filter(Project.id == project_id).first()
-            proj_name = project.name if project else "Project"
-            notification = Notification(
-                user_id=task.assigned_to,
-                title="Task Assigned",
-                message=f"Task '{task.title}' has been assigned to you in project '{proj_name}'."
-            )
-            db.add(notification)
+
     if "due_date" in request.model_fields_set:
         task.due_date = request.due_date
+
+    if task.assigned_to != old_assignee and task.assigned_to:
+        proj_name = project.name if project else "Project"
+        notification = Notification(
+            user_id=task.assigned_to,
+            title="Task Assigned",
+            message=f"Task '{task.title}' has been assigned to you in project '{proj_name}'."
+        )
+        db.add(notification)
         
     db.commit()
     db.refresh(task)

@@ -265,6 +265,8 @@ class MyTask(BaseModel):
     project_id: int
     project_name: str
     created_at: datetime
+    story_seq: Optional[int] = None
+    task_seq: Optional[int] = None
 
     class Config:
         from_attributes = True
