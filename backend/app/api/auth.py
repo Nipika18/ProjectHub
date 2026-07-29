@@ -522,20 +522,24 @@ def refresh_token_endpoint(req: schemas.TokenRefreshRequest, db: Session = Depen
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 def forgot_password(req: schemas.PasswordResetRequest, request: Request, db: Session = Depends(get_db)):
-    """Triggers a password reset link sent via Neon Auth email sender."""
+    """Triggers a password reset link sent via Neon Auth or local SMTP email sender."""
     validate_corporate_domain(req.email)
     neon_url = get_neon_auth_url()
-    if not neon_url:
-        raise HTTPException(
-            status_code=500,
-            detail="Neon Auth is not configured. Cannot send password reset email."
-        )
-
     origin = request.headers.get("origin") or "http://localhost:8000"
     ip = get_client_ip(request)
 
     # Check if user exists in local DB
     user = db.query(User).filter(User.email == req.email).first()
+
+    if not neon_url:
+        # Local SMTP/email fallback when Neon Auth is not configured
+        if user:
+            token = create_verification_token({"email": user.email, "action": "password_reset"}, expires_hours=1)
+            reset_url = f"{origin}/?reset-password=true&access_token={token}"
+            from backend.app.services.email_service import send_password_reset_email
+            send_password_reset_email(user.email, user.full_name or user.email.split("@")[0], reset_url)
+            log_activity(db, user.id, "password_reset_request", f"Password reset requested for {req.email} [IP: {ip}]")
+        return {"detail": "If an account exists with this email, a password reset link has been sent to your inbox."}
 
     # Auto-ensure user is synced in Neon Auth before triggering reset
     if user:
@@ -565,8 +569,6 @@ def forgot_password(req: schemas.PasswordResetRequest, request: Request, db: Ses
         if res.status_code >= 400:
             err_msg = res.json().get("message", res.text) if "application/json" in res.headers.get("Content-Type", "") else res.text
             print(f"[ProjectHub] Neon Auth error: {err_msg}")
-            # Do not expose internal Neon errors directly to user if it's just "user not found"
-            # But for debugging, we will log it.
             if "user not found" not in err_msg.lower():
                 raise Exception(f"Neon API Error: {err_msg}")
                 
@@ -583,20 +585,33 @@ def forgot_password(req: schemas.PasswordResetRequest, request: Request, db: Ses
 
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
 def reset_password(req: schemas.PasswordResetConfirm, request: Request, db: Session = Depends(get_db)):
-    """Confirms a password reset using the token via Neon Auth and updates local password hash."""
+    """Confirms a password reset using the token via Neon Auth or local JWT token."""
     if len(req.new_password) < 6:
         raise HTTPException(
             status_code=400,
             detail="Password must be at least 6 characters long."
         )
     neon_url = get_neon_auth_url()
-    if not neon_url:
-        raise HTTPException(
-            status_code=500,
-            detail="Neon Auth is not configured."
-        )
-    
     ip = get_client_ip(request)
+
+    if not neon_url:
+        # Local JWT password reset fallback
+        payload = decode_verification_token(req.access_token)
+        if not payload or payload.get("action") != "password_reset":
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid or expired password reset token."
+            )
+        email = payload.get("email")
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found.")
+        
+        user.hashed_password = get_password_hash(req.new_password)
+        db.commit()
+        log_activity(db, user.id, "password_reset_complete", f"Password reset completed for {email} [IP: {ip}]")
+        return {"detail": "Password has been reset successfully. You can now log in with your new password."}
+    
     try:
         # Confirm password reset with Neon Auth
         res = requests.post(
@@ -637,6 +652,7 @@ def reset_password(req: schemas.PasswordResetConfirm, request: Request, db: Sess
             status_code=400,
             detail=f"Could not reset password: {err_msg}"
         )
+
 
 
 # ──────────────────────────────────────────────

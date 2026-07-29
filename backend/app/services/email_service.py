@@ -241,3 +241,67 @@ def send_project_added_email(email: str, full_name: str, project_name: str, role
     if not is_smtp_configured():
         print(f"[ProjectHub Local Dev] Project Added email for {email} in project '{project_name}'")
     _dispatch_email(email, subject, html_content)
+
+def send_password_reset_email(email: str, full_name: str, reset_url: str):
+    """Sends password reset email with recovery link."""
+    subject = "Reset your ProjectHub password"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin:0; padding:0; background-color:#f4f7fa; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f4f7fa; padding: 40px 10px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px; background-color:#ffffff; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.08); overflow:hidden;">
+                
+                <tr>
+                  <td style="background-color:#1e40af; padding:30px 40px; text-align:center;">
+                    <h1 style="color:#ffffff; margin:0; font-size:26px; font-weight:700;">ProjectHub</h1>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding:40px; color:#374151; font-size:16px; line-height:1.6;">
+                    <p style="margin-top:0; font-size:18px; font-weight:600; color:#111827;">Hi {full_name},</p>
+                    <p style="margin-bottom:20px; color:#4b5563;">You requested a password reset for your ProjectHub account. Click the button below to reset your password:</p>
+
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:30px 0;">
+                      <tr>
+                        <td align="center">
+                          <a href="{reset_url}" target="_blank" style="background-color:#2563eb; color:#ffffff !important; text-decoration:none !important; padding:14px 32px; border-radius:8px; font-weight:bold; font-size:16px; display:inline-block;">
+                            <span style="color:#ffffff !important; text-decoration:none !important;">Reset Password</span>
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="font-size:13px; color:#6b7280; margin-top:30px; border-top:1px solid #f3f4f6; padding-top:20px;">
+                      If the button does not work, copy and paste this URL into your browser:<br>
+                      <a href="{reset_url}" style="color:#2563eb; word-break:break-all;">{reset_url}</a>
+                    </p>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="background-color:#f9fafb; padding:20px 40px; text-align:center; border-top:1px solid #f3f4f6;">
+                    <p style="margin:0; font-size:12px; color:#9ca3af;">If you did not request a password reset, you can safely ignore this email.</p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+    """
+
+    if not is_smtp_configured():
+        print(f"[ProjectHub Local Dev] Password Reset URL for {email}: {reset_url}")
+    _dispatch_email(email, subject, html_content)
+

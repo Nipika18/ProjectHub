@@ -379,14 +379,15 @@
                 <!-- Project Detail View Container (Embedded Dynamic Page) -->
                 <div id="project-detail-view" class="project-details-panel glass-panel hidden">
                     <div class="detail-header">
-                        <button class="btn btn-text" id="btn-back-to-projects"><i data-lucide="arrow-left"></i> Back to
-                            Projects</button>
                         <div class="project-header-main">
                             <div class="project-title-area">
                                 <h2 id="detail-project-title">Project Name</h2>
                                 <p id="detail-project-desc">Project Description</p>
+                                <p id="detail-project-due-date" style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px;"><i data-lucide="calendar" style="width: 14px; height: 14px;"></i> <span></span></p>
                             </div>
                             <div class="project-actions">
+                                <button class="btn btn-secondary" id="btn-edit-project"><i data-lucide="edit-3"></i>
+                                    Edit Project</button>
                                 <button class="btn btn-danger" id="btn-delete-project"><i data-lucide="trash-2"></i>
                                     Delete Project</button>
                             </div>
@@ -1014,10 +1015,44 @@
                                 <textarea id="project-desc" rows="4"
                                     placeholder="Brief outline of the project objectives and contents..."></textarea>
                             </div>
+                            <div class="form-group">
+                                <label for="project-due-date">Due Date (Optional)</label>
+                                <input type="date" id="project-due-date">
+                            </div>
                             <div class="modal-actions">
                                 <button type="button" class="btn btn-secondary"
                                     id="btn-cancel-project-modal">Cancel</button>
                                 <button type="submit" class="btn btn-primary">Create Project</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Edit Project Modal -->
+                <div id="edit-project-modal" class="modal-overlay">
+                    <div class="modal-glass">
+                        <div class="modal-header">
+                            <h3>Edit Project</h3>
+                            <button class="modal-close" id="btn-close-edit-project-modal"><i data-lucide="x"></i></button>
+                        </div>
+                        <form id="edit-project-form">
+                            <div class="form-group">
+                                <label for="edit-project-name">Project Title</label>
+                                <input type="text" id="edit-project-name" required placeholder="e.g. Website Overhaul 2026">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-project-desc">Description</label>
+                                <textarea id="edit-project-desc" rows="4"
+                                    placeholder="Brief outline of the project objectives and contents..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-project-due-date">Due Date (Optional)</label>
+                                <input type="date" id="edit-project-due-date">
+                            </div>
+                            <div class="modal-actions">
+                                <button type="button" class="btn btn-secondary"
+                                    id="btn-cancel-edit-project-modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
                             </div>
                         </form>
                     </div>

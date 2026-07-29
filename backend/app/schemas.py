@@ -62,6 +62,7 @@ class AdminAssignRequest(BaseModel):
 class ProjectBase(BaseModel):
     name: str
     description: Optional[str] = None
+    due_date: Optional[datetime] = None
 
 class ProjectCreate(ProjectBase):
     pass

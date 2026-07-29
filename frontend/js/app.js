@@ -853,10 +853,15 @@ function applyRBACUI() {
         teamControls.style.display = hasManagerPrivileges ? "flex" : "none";
     }
 
-    // Delete project button is visible for project management
+    // Edit and Delete project buttons are visible for project management
+    const editProjectBtn = document.getElementById("btn-edit-project");
+    if (editProjectBtn) {
+        editProjectBtn.style.display = hasManagerPrivileges ? "inline-flex" : "none";
+    }
+
     const deleteProjectBtn = document.getElementById("btn-delete-project");
     if (deleteProjectBtn) {
-        deleteProjectBtn.style.display = "inline-flex";
+        deleteProjectBtn.style.display = hasManagerPrivileges ? "inline-flex" : "none";
     }
 
     // "New Project" button is visible to all logged-in users
@@ -1101,8 +1106,7 @@ function bindProjectEvents() {
     const modal = document.getElementById("create-project-modal");
     const form = document.getElementById("create-project-form");
 
-    // Detail Panel Back Button
-    const btnBack = document.getElementById("btn-back-to-projects");
+    // Detail Panel Back Button removed
 
     if (btnOpen) {
         btnOpen.addEventListener("click", () => {
@@ -1113,13 +1117,6 @@ function bindProjectEvents() {
     if (btnClose) btnClose.addEventListener("click", () => modal && modal.classList.remove("active"));
     if (btnCancel) btnCancel.addEventListener("click", () => modal && modal.classList.remove("active"));
 
-    if (btnBack) {
-        btnBack.addEventListener("click", () => {
-            state.currentProject = null;
-            window.location.hash = "#projects";
-        });
-    }
-
     if (form) {
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -1129,6 +1126,10 @@ function bindProjectEvents() {
 
             const name = document.getElementById("project-name")?.value;
             const description = document.getElementById("project-desc")?.value;
+            let due_date = document.getElementById("project-due-date")?.value;
+            
+            // Format due_date as ISO string if provided, else undefined
+            due_date = due_date ? new Date(due_date).toISOString() : undefined;
 
             const origBtnText = submitBtn ? submitBtn.innerHTML : "Create Project";
             if (submitBtn) {
@@ -1144,7 +1145,7 @@ function bindProjectEvents() {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${state.token}`
                     },
-                    body: JSON.stringify({ name, description })
+                    body: JSON.stringify({ name, description, due_date })
                 });
 
                 if (!response.ok) throw new Error("Could not create project.");
@@ -1311,6 +1312,18 @@ async function openProjectDetail(projectId) {
         // Populate detail panels
         document.getElementById("detail-project-title").textContent = project.name;
         document.getElementById("detail-project-desc").textContent = project.description || "No description provided.";
+        
+        const dueDateEl = document.getElementById("detail-project-due-date");
+        if (dueDateEl) {
+            const span = dueDateEl.querySelector("span");
+            if (project.due_date) {
+                span.textContent = `Due: ${new Date(project.due_date).toLocaleDateString()}`;
+                dueDateEl.style.display = "flex";
+            } else {
+                span.textContent = "";
+                dueDateEl.style.display = "none";
+            }
+        }
 
         // Hide grid, show detail panel
         document.getElementById("project-cards-container").classList.add("hidden");
@@ -1330,10 +1343,6 @@ async function openProjectDetail(projectId) {
             teamControls.style.display = "flex";
         }
 
-        const deleteProjectBtn = document.getElementById("btn-delete-project");
-        if (deleteProjectBtn) {
-            deleteProjectBtn.style.display = "inline-flex";
-        }
         applyRBACUI();
     } catch (e) {
         showToast(e.message, "error");
@@ -2903,7 +2912,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Reload only the active section
         if (state.activeSection === "dashboard") loadDashboardStats();
         if (state.activeSection === "logs") loadActivityLogs();
-        if (state.activeSection === "projects") loadProjects();
+        if (state.activeSection === "projects") {
+            if (selectedId) {
+                window.location.hash = `projects/${selectedId}`;
+            } else {
+                loadProjects();
+            }
+        }
         if (state.activeSection === "mytasks") loadMyTasks();
         if (state.activeSection === "milestones") loadMilestonesRoadmap();
         if (state.activeSection === "stories") loadStories();
@@ -4862,10 +4877,10 @@ function renderStoriesListView(storiesList, projectId) {
                         <span style="width: 20px; height: 20px; border-radius: 50%; background: ${assigneeName ? '#10B981' : '#E2E8F0'}; color: ${assigneeName ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700;">
                             ${assigneeName ? assigneeInitial : '<i data-lucide="user" style="width: 12px; height: 12px;"></i>'}
                         </span>
-                        <select ${isAdmin ? '' : 'disabled'} onchange="const s = state.storiesList.find(x => x.id === ${story.id}); if (s) s.assignee = this.value; showToast('Assignee updated to ' + (this.value || 'Unassigned'), 'success'); renderStoriesListView(state.storiesList, ${projectId})" style="background: transparent; border: none; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; cursor: pointer; outline: none;">
-                            <option value="" ${!assigneeName ? 'selected' : ''}>Unassigned</option>
-                            ${assigneeOptionsHtml}
-                        </select>
+                        <div ${isAdmin ? `onclick="openInlineUserPicker(event, 'assignee', ${story.id}, null, ${projectId}, true)"` : ''} style="background: transparent; border: none; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; cursor: ${isAdmin ? 'pointer' : 'default'}; outline: none; padding: 2px 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: space-between; min-width: 110px;" onmouseover="if(${isAdmin}) this.style.background='var(--bg-base)'" onmouseout="if(${isAdmin}) this.style.background='transparent'">
+                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${assigneeName || 'Unassigned'}</span>
+                            ${isAdmin ? '<i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--color-text-muted);"></i>' : ''}
+                        </div>
                     </div>
                 </td>
 
@@ -4875,9 +4890,10 @@ function renderStoriesListView(storiesList, projectId) {
                         <span style="width: 20px; height: 20px; border-radius: 50%; background: #2563EB; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700;">
                             ${reporterInitial}
                         </span>
-                        <select ${isAdmin ? '' : 'disabled'} onchange="const s = state.storiesList.find(x => x.id === ${story.id}); if (s) s.reporter = this.value; showToast('Reporter updated to ' + this.value, 'success'); renderStoriesListView(state.storiesList, ${projectId})" style="background: transparent; border: none; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; cursor: pointer; outline: none;">
-                            ${reporterOptionsHtml}
-                        </select>
+                        <div ${isAdmin ? `onclick="openInlineUserPicker(event, 'reporter', ${story.id}, null, ${projectId}, true)"` : ''} style="background: transparent; border: none; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; cursor: ${isAdmin ? 'pointer' : 'default'}; outline: none; padding: 2px 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: space-between; min-width: 110px;" onmouseover="if(${isAdmin}) this.style.background='var(--bg-base)'" onmouseout="if(${isAdmin}) this.style.background='transparent'">
+                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${reporterName || 'Unassigned'}</span>
+                            ${isAdmin ? '<i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--color-text-muted);"></i>' : ''}
+                        </div>
                     </div>
                 </td>
 
@@ -4991,10 +5007,10 @@ function renderStoriesListView(storiesList, projectId) {
                                 <span style="width: 20px; height: 20px; border-radius: 50%; background: ${explicitAssignee ? '#10B981' : '#E2E8F0'}; color: ${explicitAssignee ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700;">
                                     ${explicitAssignee ? initial : '<i data-lucide="user" style="width: 11px; height: 11px;"></i>'}
                                 </span>
-                                <select ${isAdmin ? '' : 'disabled'} onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'assigned_to', this.value ? parseInt(this.value) : null)" style="background: transparent; border: none; font-size: 0.84rem; color: var(--color-text-main); cursor: pointer; outline: none;">
-                                    <option value="">Unassigned</option>
-                                    ${membersOptions}
-                                </select>
+                                <div ${isAdmin ? `onclick="openInlineUserPicker(event, 'assignee', ${story.id}, ${t.id}, ${projectId}, true)"` : ''} style="background: transparent; border: none; font-size: 0.84rem; color: var(--color-text-main); font-weight: 500; cursor: ${isAdmin ? 'pointer' : 'default'}; outline: none; padding: 2px 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: space-between; min-width: 110px;" onmouseover="if(${isAdmin}) this.style.background='var(--bg-base)'" onmouseout="if(${isAdmin}) this.style.background='transparent'">
+                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${assigneeName || 'Unassigned'}</span>
+                                    ${isAdmin ? '<i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--color-text-muted);"></i>' : ''}
+                                </div>
                             </div>
                         </td>
 
@@ -5004,9 +5020,10 @@ function renderStoriesListView(storiesList, projectId) {
                                 <span style="width: 20px; height: 20px; border-radius: 50%; background: #2563EB; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700;">
                                     ${tReporterInitial}
                                 </span>
-                                <select ${isAdmin ? '' : 'disabled'} onchange="t.reporter = this.value; showToast('Reporter updated to ' + this.value, 'success'); renderStoriesListView(state.storiesList, ${projectId})" style="background: transparent; border: none; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; cursor: pointer; outline: none;">
-                                    ${tReporterOptionsHtml}
-                                </select>
+                                <div ${isAdmin ? `onclick="openInlineUserPicker(event, 'reporter', ${story.id}, ${t.id}, ${projectId}, true)"` : ''} style="background: transparent; border: none; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; cursor: ${isAdmin ? 'pointer' : 'default'}; outline: none; padding: 2px 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: space-between; min-width: 110px;" onmouseover="if(${isAdmin}) this.style.background='var(--bg-base)'" onmouseout="if(${isAdmin}) this.style.background='transparent'">
+                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${tReporterName || 'Unassigned'}</span>
+                                    ${isAdmin ? '<i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--color-text-muted);"></i>' : ''}
+                                </div>
                             </div>
                         </td>
 
@@ -5076,6 +5093,144 @@ function openStoryDetailModal(projectId, storyId) {
     }, 50);
 }
 window.openStoryDetailModal = openStoryDetailModal;
+
+window.openInlineUserPicker = function(event, roleType, storyId, taskId, projectId, isAdmin) {
+    if (!isAdmin) return;
+    
+    event.stopPropagation();
+    
+    const existing = document.getElementById('inline-user-picker');
+    if (existing) existing.remove();
+
+    const picker = document.createElement('div');
+    picker.id = 'inline-user-picker';
+    picker.style.cssText = 'position: absolute; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; z-index: 1050; box-shadow: var(--shadow-premium); display: flex; flex-direction: column; width: 220px; font-family: var(--font-family);';
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    picker.style.top = (window.scrollY + rect.bottom + 4) + 'px';
+    picker.style.left = (window.scrollX + rect.left) + 'px';
+
+    const searchWrapper = document.createElement('div');
+    searchWrapper.style.cssText = 'padding: 8px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;';
+    
+    const icon = document.createElement('i');
+    icon.setAttribute('data-lucide', 'user');
+    icon.style.cssText = 'width: 14px; height: 14px; color: var(--color-text-muted);';
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Search users...';
+    input.style.cssText = 'border: none; background: transparent; outline: none; width: 100%; font-size: 0.85rem; color: var(--color-text-main);';
+    
+    searchWrapper.appendChild(icon);
+    searchWrapper.appendChild(input);
+    picker.appendChild(searchWrapper);
+
+    const optionsContainer = document.createElement('div');
+    optionsContainer.style.cssText = 'max-height: 200px; overflow-y: auto; padding: 4px 0;';
+    picker.appendChild(optionsContainer);
+
+    const members = state.projectMembers || [];
+    const isTaskAssignee = taskId && roleType === 'assignee';
+    
+    const options = [
+        { name: "Unassigned", value: "", icon: "user" }
+    ];
+    
+    const currentUser = state.user?.full_name;
+    const currentUserId = state.user?.id;
+    
+    if (currentUser) {
+        options.push({ 
+            name: `${currentUser} (Assign to me)`, 
+            value: isTaskAssignee ? currentUserId : currentUser, 
+            initial: currentUser.charAt(0).toUpperCase() 
+        });
+    }
+
+    members.forEach(m => {
+        if (m.user_name !== currentUser) {
+            options.push({ 
+                name: m.user_name, 
+                value: isTaskAssignee ? m.user_id : m.user_name,
+                initial: m.user_name.charAt(0).toUpperCase()
+            });
+        }
+    });
+
+    const renderOptions = (filterText) => {
+        optionsContainer.innerHTML = '';
+        const filtered = options.filter(o => o.name.toLowerCase().includes(filterText.toLowerCase()));
+        if (filtered.length === 0) {
+            optionsContainer.innerHTML = '<div style="padding: 8px 12px; color: var(--color-text-muted); font-size: 0.85rem;">No matches</div>';
+            return;
+        }
+        filtered.forEach(o => {
+            const optDiv = document.createElement('div');
+            optDiv.style.cssText = `padding: 8px 12px; font-size: 0.85rem; color: var(--color-text-main); cursor: pointer; display: flex; align-items: center; gap: 8px;`;
+            optDiv.onmouseover = () => { optDiv.style.background = 'var(--bg-base)'; };
+            optDiv.onmouseout = () => { optDiv.style.background = 'transparent'; };
+            
+            const avatarBg = o.value !== "" ? (roleType === 'assignee' ? '#10B981' : '#2563EB') : '#E2E8F0';
+            const avatarColor = o.value !== "" ? '#fff' : '#475569';
+            
+            const avatarHtml = `<span style="width: 20px; height: 20px; border-radius: 50%; background: ${avatarBg}; color: ${avatarColor}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; flex-shrink: 0;">
+                ${o.value !== "" ? o.initial : '<i data-lucide="user" style="width: 12px; height: 12px;"></i>'}
+            </span>`;
+            
+            optDiv.innerHTML = `${avatarHtml} <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${o.name}</span>`;
+            
+            optDiv.onclick = (e) => {
+                e.stopPropagation();
+                picker.remove();
+                if (taskId) {
+                    if (roleType === 'assignee') {
+                        updateTaskField(projectId, storyId, taskId, 'assigned_to', o.value ? parseInt(o.value) : null);
+                    } else {
+                        const story = state.storiesList.find(x => x.id === storyId);
+                        if (story) {
+                            const task = story.tasks.find(x => x.id === taskId);
+                            if (task) {
+                                task.reporter = o.value || 'Unassigned';
+                                showToast(`Reporter updated to ${o.name.split(' ')[0]}`, 'success');
+                                renderStoriesListView(state.storiesList, projectId);
+                            }
+                        }
+                    }
+                } else {
+                    const story = state.storiesList.find(x => x.id === storyId);
+                    if (story) {
+                        story[roleType] = o.value || 'Unassigned';
+                        showToast(`${roleType.charAt(0).toUpperCase() + roleType.slice(1)} updated to ${o.name.split(' ')[0]}`, 'success');
+                        renderStoriesListView(state.storiesList, projectId);
+                    }
+                }
+            };
+            optionsContainer.appendChild(optDiv);
+        });
+        if (window.lucide) lucide.createIcons({ root: optionsContainer });
+    };
+
+    input.oninput = (e) => renderOptions(e.target.value);
+    picker.onclick = (e) => e.stopPropagation();
+    
+    document.body.appendChild(picker);
+    renderOptions("");
+    input.focus();
+    if (window.lucide) {
+        lucide.createIcons({ root: searchWrapper });
+    }
+
+    setTimeout(() => {
+        const closePicker = (e) => {
+            if (document.getElementById('inline-user-picker')) {
+                document.getElementById('inline-user-picker').remove();
+            }
+            document.removeEventListener('click', closePicker);
+        };
+        document.addEventListener('click', closePicker);
+    }, 10);
+};
 
 // ===== Jira List View Selection Logic =====
 window.jiraListUpdateSelection = function () {
@@ -5485,35 +5640,42 @@ document.getElementById("btn-auto-assign")?.addEventListener("click", async (e) 
         return;
     }
 
-    const btn = e.currentTarget;
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i data-lucide="loader" class="spin" style="width:16px;height:16px;margin-right:6px;"></i> Assigning...';
-    lucide.createIcons();
+    showConfirmModal(
+        "Auto-Assign Tasks",
+        "This will automatically assign all <strong>unassigned</strong> tasks in this project to team members based on their roles.<br><br><small>Tasks that are already assigned manually will not be overwritten.</small>",
+        "Yes, Auto-Assign",
+        async () => {
+            const btn = e.currentTarget;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader" class="spin" style="width:16px;height:16px;margin-right:6px;"></i> Assigning...';
+            lucide.createIcons();
 
-    try {
-        const res = await fetch(`${API_BASE}/api/projects/${state.currentProject.id}/team/auto-assign`, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${state.token}`
+            try {
+                const res = await fetch(`${API_BASE}/api/projects/${state.currentProject.id}/team/auto-assign`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${state.token}`
+                    }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast(data.detail || "Tasks successfully assigned!", "success");
+                    await loadStories();
+                } else {
+                    const err = await res.json();
+                    showToast(err.detail || "Failed to auto-assign tasks", "error");
+                }
+            } catch (error) {
+                showToast(`Network error: ${error.message}`, "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                lucide.createIcons();
             }
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            showToast(data.detail || "Tasks successfully assigned!", "success");
-            await loadStories();
-        } else {
-            const err = await res.json();
-            showToast(err.detail || "Failed to auto-assign tasks", "error");
         }
-    } catch (e) {
-        showToast(`Network error: ${e.message}`, "error");
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        lucide.createIcons();
-    }
+    );
 });
 
 window.removeTeamMember = async function (projectId, memberId) {
@@ -6093,6 +6255,109 @@ function bindNotificationEvents() {
         }
     });
 }
+
+// =====================================================================
+// Global Edit Project Modal Handlers
+// =====================================================================
+document.addEventListener("click", (e) => {
+    const btn = e.target.closest("#btn-edit-project");
+    if (!btn) return;
+    e.preventDefault();
+
+    if (!checkAdminAccess("edit projects")) {
+        // Only managers or admins can edit. Since we don't have a distinct "edit projects" RBAC entry in the default list for now, let's just use the current project user_role check.
+        const isGlobalAdmin = state.user?.is_admin;
+        const isProjManager = state.currentProject && (state.currentProject.user_role === 'Manager' || state.currentProject.user_role === 'Admin');
+        if (!isGlobalAdmin && !isProjManager) {
+            showToast("You don't have permission to edit this project.", "error");
+            return;
+        }
+    }
+
+    const editProjectModal = document.getElementById("edit-project-modal");
+    if (!editProjectModal) return;
+
+    if (!state.currentProject) {
+        showToast("Please select a project first to edit.", "error");
+        return;
+    }
+
+    document.getElementById("edit-project-name").value = state.currentProject.name || "";
+    document.getElementById("edit-project-desc").value = state.currentProject.description || "";
+    if (state.currentProject.due_date) {
+        document.getElementById("edit-project-due-date").value = state.currentProject.due_date.split("T")[0];
+    } else {
+        document.getElementById("edit-project-due-date").value = "";
+    }
+
+    editProjectModal.style.display = "flex";
+    editProjectModal.classList.add("active");
+});
+
+document.addEventListener("click", (e) => {
+    if (e.target.closest("#btn-close-edit-project-modal") || e.target.closest("#btn-cancel-edit-project-modal")) {
+        const modal = document.getElementById("edit-project-modal");
+        if (modal) {
+            modal.style.display = "none";
+            modal.classList.remove("active");
+        }
+    }
+});
+
+document.addEventListener("submit", async (e) => {
+    if (e.target.id === "edit-project-form") {
+        e.preventDefault();
+        
+        const form = e.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn && submitBtn.disabled) return;
+        
+        if (!state.currentProject) return;
+
+        const name = document.getElementById("edit-project-name").value;
+        const description = document.getElementById("edit-project-desc").value;
+        let due_date = document.getElementById("edit-project-due-date").value;
+        due_date = due_date ? new Date(due_date).toISOString() : undefined;
+
+        const origBtnText = submitBtn ? submitBtn.innerHTML : "Save Changes";
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i data-lucide="loader" style="width: 14px; height: 14px;"></i> Saving...';
+            if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/api/projects/${state.currentProject.id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${state.token}`
+                },
+                body: JSON.stringify({ name, description, due_date })
+            });
+
+            if (!response.ok) throw new Error("Could not update project.");
+
+            showToast("Project updated successfully!", "success");
+            const modal = document.getElementById("edit-project-modal");
+            if (modal) {
+                modal.style.display = "none";
+                modal.classList.remove("active");
+            }
+            
+            // Reload project details
+            openProjectDetail(state.currentProject.id);
+            loadWorkspaceData(); // Refresh sidebar project name
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origBtnText;
+            }
+        }
+    }
+});
 
 // =====================================================================
 // Global Delete Project Modal Handlers

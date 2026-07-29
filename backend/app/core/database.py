@@ -57,6 +57,14 @@ def init_db():
     except Exception:
         pass
 
+    # Safe migration for projects due_date column
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS due_date TIMESTAMP;"))
+            conn.commit()
+    except Exception:
+        pass
+
     # Create HNSW index for high speed pgvector similarity searches
     with engine.connect() as conn:
         conn.execute(text(
