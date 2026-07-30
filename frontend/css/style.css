@@ -2639,3 +2639,18 @@ h1, h2, h3, h4 {
     background-color: var(--color-primary);
     border-radius: 6px;
 }
+
+/* Subtask item responsive fixes */
+@media screen and (max-width: 1400px) {
+    .subtask-item-row {
+        flex-wrap: wrap;
+    }
+    .subtask-item-left {
+        min-width: 100% !important;
+        margin-bottom: 4px;
+    }
+    .subtask-item-right {
+        width: 100%;
+        justify-content: flex-start !important;
+    }
+}

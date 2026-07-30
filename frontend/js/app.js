@@ -4127,9 +4127,9 @@ function renderStoryDetail(projectId, story) {
 
         const taskSeqText = formatStoryKey(story, projectId) + "-" + (idx + 1);
         return `
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 14px; margin-bottom: 8px;">
+        <div class="subtask-item-row" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 14px; margin-bottom: 8px;">
             <!-- Left: Subtask Type Badge + Title -->
-            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+            <div class="subtask-item-left" style="display: flex; align-items: center; gap: 10px; flex: 1 1 250px; min-width: 0;">
                 <span style="font-size: 0.75rem; color: var(--color-text-muted); font-weight: 700; flex-shrink: 0;">${taskSeqText}</span>
                 <select onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'task_type', this.value)" style="font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; border: none; outline: none; text-transform: uppercase; cursor: ${isAdmin ? 'pointer' : 'default'}; flex-shrink: 0; font-family: inherit;" ${isAdmin ? '' : 'disabled'}>
                     <option value="Frontend" ${t.task_type === 'Frontend' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">Frontend</option>
@@ -4139,10 +4139,10 @@ function renderStoryDetail(projectId, story) {
                     <option value="Manager" ${t.task_type === 'Manager' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">Manager</option>
                     <option value="DevOps" ${t.task_type === 'DevOps' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">DevOps</option>
                 </select>
-                <input type="text" value="${(t.title || '').replace(/"/g, '&quot;')}" onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'title', this.value)" style="flex: 1; background: transparent; border: none; font-size: 0.95rem; font-weight: 500; color: var(--color-text-main); outline: none; text-overflow: ellipsis;" ${isAdmin ? '' : 'readonly'}>
+                <input type="text" value="${(t.title || '').replace(/"/g, '&quot;')}" onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'title', this.value)" style="flex: 1 1 100px; min-width: 0; background: transparent; border: none; font-size: 0.95rem; font-weight: 500; color: var(--color-text-main); outline: none; text-overflow: ellipsis;" ${isAdmin ? '' : 'readonly'}>
             </div>
             <!-- Right: Assignee, Status, Delete -->
-            <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+            <div class="subtask-item-right" style="display: flex; align-items: center; gap: 8px; flex: 0 0 auto; flex-wrap: wrap;">
                 <select onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'assigned_to', this.value ? parseInt(this.value) : null)" style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; color: var(--color-text-main); cursor: pointer;" ${isAdmin ? '' : 'disabled'}>
                     <option value="">Unassigned</option>
                     ${membersOptions}
