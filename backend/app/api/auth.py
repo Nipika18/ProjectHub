@@ -34,6 +34,15 @@ def get_client_ip(request: Request) -> str:
         return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "127.0.0.1"
 
+def _get_base_url(request: Request) -> str:
+    """Returns application base URL prioritizing settings.APP_URL then request headers."""
+    if settings.APP_URL:
+        return settings.APP_URL.rstrip('/')
+    origin = request.headers.get("origin")
+    if origin:
+        return origin.rstrip('/')
+    return "http://sprintai.softprodigy.in"
+
 def check_rate_limit(identifier: str):
     """Enforces progressive rate limiting and account locking to prevent brute-force password guessing."""
     now = time.time()
@@ -117,9 +126,9 @@ def register(user_in: schemas.UserCreate, request: Request, db: Session = Depend
     # Send verification email
     try:
         from backend.app.services.email_service import send_verification_email
-        origin = request.headers.get("origin") or "http://localhost:8000"
+        origin = _get_base_url(request)
         token = create_verification_token(payload)
-        verify_url = f"{origin.rstrip('/')}/api/auth/verify-email?token={token}"
+        verify_url = f"{origin}/api/auth/verify-email?token={token}"
         send_verification_email(user_in.email, payload["full_name"], verify_url)
     except Exception as e:
         print(f"[ProjectHub] Verification email dispatch error: {e}")
@@ -265,9 +274,9 @@ def invite_user(
 
     try:
         from backend.app.services.email_service import send_invite_email
-        origin = request.headers.get("origin") or "http://localhost:8000"
+        origin = _get_base_url(request)
         token = create_verification_token(payload)
-        confirm_url = f"{origin.rstrip('/')}/api/auth/verify-email?token={token}"
+        confirm_url = f"{origin}/api/auth/verify-email?token={token}"
         send_invite_email(invite_in.email, invite_in.full_name, pwd, confirm_url)
         print(f"[ProjectHub] Stateless invite email sent to {invite_in.email}")
     except Exception as e:
@@ -525,7 +534,7 @@ def forgot_password(req: schemas.PasswordResetRequest, request: Request, db: Ses
     """Triggers a password reset link sent via Neon Auth or local SMTP email sender."""
     validate_corporate_domain(req.email)
     neon_url = get_neon_auth_url()
-    origin = request.headers.get("origin") or "http://localhost:8000"
+    origin = _get_base_url(request)
     ip = get_client_ip(request)
 
     # Check if user exists in local DB

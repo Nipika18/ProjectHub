@@ -214,7 +214,7 @@ def send_project_added_email(email: str, full_name: str, project_name: str, role
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:30px 0;">
                       <tr>
                         <td align="center">
-                          <a href="http://localhost:8000" target="_blank" style="background-color:#2563eb; color:#ffffff !important; text-decoration:none !important; padding:14px 32px; border-radius:8px; font-weight:bold; font-size:16px; display:inline-block; box-shadow:0 4px 6px rgba(37,99,235,0.25);">
+                          <a href="{settings.APP_URL.rstrip('/')}" target="_blank" style="background-color:#2563eb; color:#ffffff !important; text-decoration:none !important; padding:14px 32px; border-radius:8px; font-weight:bold; font-size:16px; display:inline-block; box-shadow:0 4px 6px rgba(37,99,235,0.25);">
                             <span style="color:#ffffff !important; text-decoration:none !important;">Open Workspace</span>
                           </a>
                         </td>

@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     SENDER_EMAIL: Optional[str] = None
     SENDER_NAME: str = "ProjectHub"
     
+    # Application Base URL for Email Links
+    APP_URL: str = "http://sprintai.softprodigy.in"
+    
     # JWT Auth Configuration
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
