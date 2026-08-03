@@ -60,6 +60,21 @@ def _auto_assign_tasks(db: Session, project_id: int, stories: list):
     db.commit()
 
 
+def _get_available_project_roles(db: Session, project_id: int) -> List[str]:
+    """Dynamically fetches all active project member roles, merging with core default roles."""
+    from backend.app.models import ProjectMember
+    members = db.query(ProjectMember.role).filter(ProjectMember.project_id == project_id).distinct().all()
+    custom_roles = [m[0] for m in members if m[0]]
+    defaults = ["Frontend", "Backend", "AI", "QA", "Manager"]
+    seen = set()
+    roles = []
+    for r in defaults + custom_roles:
+        if r not in seen:
+            seen.add(r)
+            roles.append(r)
+    return roles
+
+
 def _clean_stories_inputs(inputs: dict) -> dict:
     cleaned = dict(inputs)
     cleaned.pop("db", None)
@@ -99,7 +114,8 @@ def generate_stories_from_documents(
     seen_titles_lower = {t.lower() for t in existing_titles}
 
     context_text = "\n\n".join([chunk.content for chunk in chunks])
-    prompt = get_global_stories_prompt(context_text, existing_titles_prompt)
+    available_roles = _get_available_project_roles(db, project_id)
+    prompt = get_global_stories_prompt(context_text, existing_titles_prompt, available_roles)
     
     try:
         client = _openai_client
@@ -144,7 +160,7 @@ def generate_stories_from_documents(
             subtasks = s_data.get("subtasks", [])
             for t_data in subtasks:
                 task_type = t_data.get("type", "Backend")
-                if task_type not in ["Frontend", "Backend", "AI", "QA", "Manager", "DevOps"]:
+                if task_type not in available_roles:
                     task_type = "Manager"
                     
                 new_task = Task(
@@ -208,8 +224,8 @@ def generate_stories_from_single_document(
     seen_titles_lower = {t.lower() for t in existing_titles}
 
     context_text = "\n\n".join([chunk.content for chunk in chunks])
-
-    prompt = get_single_document_stories_prompt(doc.name, context_text, existing_titles_prompt)
+    available_roles = _get_available_project_roles(db, project_id)
+    prompt = get_single_document_stories_prompt(doc.name, context_text, existing_titles_prompt, available_roles)
 
     try:
         client = _openai_client
@@ -254,7 +270,7 @@ def generate_stories_from_single_document(
             subtasks = s_data.get("subtasks", [])
             for t_data in subtasks:
                 task_type = t_data.get("type", "Backend")
-                if task_type not in ["Frontend", "Backend", "AI", "QA", "Manager", "DevOps"]:
+                if task_type not in available_roles:
                     task_type = "Manager"
 
                 new_task = Task(

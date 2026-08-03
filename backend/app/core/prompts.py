@@ -1,17 +1,18 @@
-"""
-Centralized Repository for All AI System Prompts in ProjectHub.
-Keeping all prompt templates here makes it easy to find, tune, and maintain instructions for OpenAI models.
-"""
+from typing import Optional, List
 
-def get_global_stories_prompt(context_text: str, existing_titles_prompt: str) -> str:
+DEFAULT_ROLES = ["Frontend", "Backend", "AI", "QA", "Manager"]
+
+def get_global_stories_prompt(context_text: str, existing_titles_prompt: str, available_roles: Optional[List[str]] = None) -> str:
     """
     Prompt used when generating user stories from ALL documents in a project (Global Scope).
     Enforces chronological programmatic execution ordering and deduplication against existing DB stories.
     """
+    roles = available_roles if available_roles else DEFAULT_ROLES
+    roles_str = ", ".join([f"'{r}'" for r in roles])
     return f"""
     You are an expert Agile Product Manager. Read the following project document excerpts and break them down into Agile User Stories.
     For each user story, write a concise description, set priority level, estimate story points, and list clear Acceptance Criteria.
-    Then, break each user story down into technical subtasks. Categorize each subtask exactly as one of the following: 'Frontend', 'Backend', 'AI', or 'Manager'. If there is any work discussion, planning, setup, meetings, or anything important besides Frontend, Backend, or AI, it should be assigned to 'Manager'.
+    Then, break each user story down into technical subtasks. Categorize each subtask type exactly as one of the following available project roles: {roles_str}. If there is any work discussion, planning, setup, meetings, or unmapped task besides development/QA, it should be assigned to 'Manager'.
     
     INTELLIGENT PROGRAMMATIC EXECUTION ORDERING REQUIREMENT:
     You MUST organize and return the generated user stories in chronological, programmatic software development execution order (what a software engineering team MUST build first, second, third, etc.), regardless of where they are mentioned in the document text!
@@ -51,15 +52,17 @@ def get_global_stories_prompt(context_text: str, existing_titles_prompt: str) ->
     """
 
 
-def get_single_document_stories_prompt(doc_name: str, context_text: str, existing_titles_prompt: str) -> str:
+def get_single_document_stories_prompt(doc_name: str, context_text: str, existing_titles_prompt: str, available_roles: Optional[List[str]] = None) -> str:
     """
     Prompt used when generating user stories from a SINGLE specific document (Row level scope).
     Enforces chronological programmatic execution ordering and deduplication against existing DB stories.
     """
+    roles = available_roles if available_roles else DEFAULT_ROLES
+    roles_str = ", ".join([f"'{r}'" for r in roles])
     return f"""
     You are an expert Agile Product Manager. Read the following document content and break it down into Agile User Stories.
     For each user story, write a concise description, set priority level, estimate story points, and list clear Acceptance Criteria.
-    Then, break each user story down into technical subtasks. Categorize each subtask exactly as one of the following: 'Frontend', 'Backend', 'AI', or 'Manager'. If there is any work discussion, planning, setup, meetings, or anything important besides Frontend, Backend, or AI, it should be assigned to 'Manager'.
+    Then, break each user story down into technical subtasks. Categorize each subtask type exactly as one of the following available project roles: {roles_str}. If there is any work discussion, planning, setup, meetings, or unmapped task besides development/QA, it should be assigned to 'Manager'.
     
     INTELLIGENT PROGRAMMATIC EXECUTION ORDERING REQUIREMENT:
     You MUST organize and return the generated user stories in chronological, programmatic software development execution order (what a software engineering team MUST build first, second, third, etc.), regardless of where they are mentioned in the document text!

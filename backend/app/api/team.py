@@ -28,9 +28,9 @@ def add_team_member(
 
     # Admin-only check enforced via get_current_admin_user dependency
 
-    # Validate role
-    if request.role not in ["Frontend", "Backend", "AI", "Manager"]:
-        raise HTTPException(status_code=400, detail="Role must be 'Frontend', 'Backend', 'AI', or 'Manager'")
+    # Validate role (Allow standard roles and custom roles)
+    if not request.role or not request.role.strip():
+        raise HTTPException(status_code=400, detail="Role cannot be empty.")
 
     # Find the user by email
     user = db.query(User).filter(User.email == request.user_email).first()
@@ -215,9 +215,9 @@ def update_team_member(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Validate role
-    if request.role not in ["Frontend", "Backend", "AI", "QA", "Manager", "DevOps"]:
-        raise HTTPException(status_code=400, detail="Role must be 'Frontend', 'Backend', 'AI', 'QA', 'Manager', or 'DevOps'")
+    # Validate role (Allow standard roles and custom roles)
+    if not request.role or not request.role.strip():
+        raise HTTPException(status_code=400, detail="Role cannot be empty.")
 
     member = db.query(ProjectMember).filter(
         ProjectMember.id == member_id,
