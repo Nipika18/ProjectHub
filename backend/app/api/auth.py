@@ -616,6 +616,12 @@ def reset_password(req: schemas.PasswordResetConfirm, request: Request, db: Sess
         if not user:
             raise HTTPException(status_code=404, detail="User not found.")
         
+        if verify_password(req.new_password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password cannot be the same as your current password."
+            )
+        
         user.hashed_password = get_password_hash(req.new_password)
         db.commit()
         log_activity(db, user.id, "password_reset_complete", f"Password reset completed for {email} [IP: {ip}]")
