@@ -67,7 +67,7 @@ def add_team_member(
         from backend.app.services.email_service import send_project_added_email
         send_project_added_email(user.email, user.full_name, project.name, request.role)
     except Exception as e:
-        print(f"[ProjectHub] Project member notification email error: {e}")
+        print(f"[Sprint AI] Project member notification email error: {e}")
 
     # Auto-assign existing unassigned tasks matching this new member's role
     try:
@@ -85,7 +85,7 @@ def add_team_member(
             ))
         db.commit()
     except Exception as e:
-        print(f"[ProjectHub] Error auto-assigning tasks to new member: {e}")
+        print(f"[Sprint AI] Error auto-assigning tasks to new member: {e}")
 
     return schemas.ProjectMember(
         id=member.id,

@@ -32,7 +32,7 @@ const API_BASE = "";
 
 function escapeHTML(str) {
     if (!str) return '';
-    return str.toString().replace(/[&<>'"]/g, 
+    return str.toString().replace(/[&<>'"]/g,
         tag => ({
             '&': '&amp;',
             '<': '&lt;',
@@ -48,7 +48,7 @@ function escapeHTML(str) {
 // =====================================================================
 let pendingConfirmCallback = null;
 
-window.showConfirmModal = function(title, message, confirmText, confirmCallback, intent = 'primary') {
+window.showConfirmModal = function (title, message, confirmText, confirmCallback, intent = 'primary') {
     const modal = document.getElementById("generic-confirm-modal");
     if (!modal) {
         // Fallback to native
@@ -59,16 +59,16 @@ window.showConfirmModal = function(title, message, confirmText, confirmCallback,
     document.getElementById("generic-confirm-title").textContent = title;
     // We use innerHTML to allow basic bolding/formatting in the prompt
     document.getElementById("generic-confirm-message").innerHTML = message;
-    
+
     const submitBtn = document.getElementById("btn-generic-confirm-submit");
     submitBtn.textContent = confirmText;
-    
+
     const iconWrapper = document.getElementById("generic-confirm-icon-wrapper");
     const icon = document.getElementById("generic-confirm-icon");
-    
+
     // Reset classes
     submitBtn.className = "btn";
-    
+
     if (intent === 'danger') {
         submitBtn.classList.add("btn-danger");
         iconWrapper.style.background = "#fef2f2";
@@ -87,15 +87,15 @@ window.showConfirmModal = function(title, message, confirmText, confirmCallback,
         iconWrapper.style.color = "#3b82f6";
         icon.setAttribute("data-lucide", "info");
     }
-    
-    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons({nodes: [modal]});
-    
+
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons({ nodes: [modal] });
+
     pendingConfirmCallback = confirmCallback;
     modal.style.display = "flex";
     setTimeout(() => modal.classList.add("active"), 10);
 };
 
-window.closeGenericConfirmModal = function() {
+window.closeGenericConfirmModal = function () {
     const modal = document.getElementById("generic-confirm-modal");
     if (modal) {
         modal.classList.remove("active");
@@ -115,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // Professional inline text box for Custom Roles
-window.promptCustomRole = function(selectObj, callback) {
+window.promptCustomRole = function (selectObj, callback) {
     if (selectObj.value === 'custom_add_new') {
         const input = document.createElement('input');
         input.type = 'text';
@@ -123,7 +123,7 @@ window.promptCustomRole = function(selectObj, callback) {
         input.style.cssText = selectObj.style.cssText;
         input.style.width = '100%';
         input.placeholder = "Type role & press Enter...";
-        
+
         let completed = false;
         const completeInput = () => {
             if (completed) return;
@@ -142,8 +142,8 @@ window.promptCustomRole = function(selectObj, callback) {
             input.replaceWith(selectObj);
             if (val && callback) callback();
         };
-        
-        input.onkeydown = function(e) {
+
+        input.onkeydown = function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 completeInput();
@@ -154,15 +154,15 @@ window.promptCustomRole = function(selectObj, callback) {
             }
         };
         input.onblur = completeInput;
-        
+
         selectObj.replaceWith(input);
         input.focus();
     } else if (selectObj.value === 'custom_remove_role') {
-        const customOpts = Array.from(selectObj.options).filter(o => 
-            o.getAttribute('data-custom') === 'true' || 
-            (!['Frontend','Backend','AI','QA','Manager','custom_add_new','custom_remove_role',''].includes(o.value) && !o.disabled)
+        const customOpts = Array.from(selectObj.options).filter(o =>
+            o.getAttribute('data-custom') === 'true' ||
+            (!['Frontend', 'Backend', 'AI', 'QA', 'Manager', 'custom_add_new', 'custom_remove_role', ''].includes(o.value) && !o.disabled)
         );
-        
+
         if (customOpts.length === 0) {
             alert("No custom roles to remove.");
             selectObj.selectedIndex = 0;
@@ -173,12 +173,12 @@ window.promptCustomRole = function(selectObj, callback) {
         input.className = selectObj.className;
         input.style.cssText = selectObj.style.cssText;
         input.style.width = '100%';
-        
+
         const defaultOpt = document.createElement('option');
         defaultOpt.text = "Select role to remove...";
         defaultOpt.value = "";
         input.add(defaultOpt);
-        
+
         customOpts.forEach(o => {
             const opt = document.createElement('option');
             opt.value = o.value;
@@ -186,7 +186,7 @@ window.promptCustomRole = function(selectObj, callback) {
             input.add(opt);
         });
 
-        input.onchange = function() {
+        input.onchange = function () {
             const val = input.value;
             if (val) {
                 for (let i = 0; i < selectObj.options.length; i++) {
@@ -200,7 +200,7 @@ window.promptCustomRole = function(selectObj, callback) {
             input.replaceWith(selectObj);
         };
 
-        input.onblur = function() {
+        input.onblur = function () {
             if (input.parentNode) {
                 selectObj.selectedIndex = 0;
                 input.replaceWith(selectObj);
@@ -247,7 +247,7 @@ window.fetch = async function (...args) {
                     state.refreshToken = null;
                 }
             } catch (e) {
-                console.error("[ProjectHub] Background token refresh error:", e);
+                console.error("[Sprint AI] Background token refresh error:", e);
             }
         }
     }
@@ -465,7 +465,7 @@ function bindAuthEvents() {
         const errorDiv = document.getElementById("login-error");
 
         errorDiv.style.display = "none";
-        
+
         const submitBtn = loginForm.querySelector('button[type="submit"]');
         const originalBtnText = submitBtn.innerHTML;
         submitBtn.disabled = true;
@@ -677,7 +677,7 @@ function bindAuthEvents() {
                 errorDiv.style.display = "block";
                 return;
             }
-            
+
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i data-lucide="loader" class="spin" style="width:16px;height:16px;margin-right:6px;"></i> Updating...';
             lucide.createIcons();
@@ -1127,7 +1127,7 @@ function bindProjectEvents() {
             const name = document.getElementById("project-name")?.value;
             const description = document.getElementById("project-desc")?.value;
             let due_date = document.getElementById("project-due-date")?.value;
-            
+
             // Format due_date as ISO string if provided, else undefined
             due_date = due_date ? new Date(due_date).toISOString() : undefined;
 
@@ -1254,6 +1254,9 @@ async function loadProjects() {
         const projects = await response.json();
         state.projects = projects;
 
+        // Update all project dropdowns globally
+        populateProjectDropdowns("no-fetch");
+
         container.innerHTML = "";
         let projectsToRender = projects;
         if (state.globalProjectId) {
@@ -1312,7 +1315,7 @@ async function openProjectDetail(projectId) {
         // Populate detail panels
         document.getElementById("detail-project-title").textContent = project.name;
         document.getElementById("detail-project-desc").textContent = project.description || "No description provided.";
-        
+
         const dueDateEl = document.getElementById("detail-project-due-date");
         if (dueDateEl) {
             const span = dueDateEl.querySelector("span");
@@ -1440,8 +1443,11 @@ async function loadProjectDetailDocuments(projectId) {
                 <td><span class="file-type-badge ${doc.file_type}">${doc.file_type}</span></td>
                 <td>${dateStr}</td>
                 <td>
-                    ${(state.user?.is_admin || state.currentProject?.user_role === 'Manager' || state.currentProject?.user_role === 'Admin') ? `
                     <div style="display: flex; gap: 6px; align-items: center;">
+                        <button class="btn-icon-secondary" onclick="downloadDocumentSecurely(${doc.id}, '${escapeHTML(doc.name).replace(/'/g, "\\'")}')" title="Download Document" style="color: var(--color-text); background: transparent; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px; cursor: pointer;">
+                            <i data-lucide="download" style="width:16px;height:16px;"></i>
+                        </button>
+                        ${(state.user?.is_admin || state.currentProject?.user_role === 'Manager' || state.currentProject?.user_role === 'Admin') ? `
                         <button class="btn btn-secondary btn-sm" id="btn-gen-stories-${doc.id}"
                             ${state.activeGenerations && state.activeGenerations[doc.id] ? 'disabled' : ''}
                             onclick="generateStoriesFromDocument(${projectId}, ${doc.id}, '${doc.name.replace(/'/g, "\\'")}')"
@@ -1451,8 +1457,8 @@ async function loadProjectDetailDocuments(projectId) {
                         <button class="btn-icon-danger" onclick="deleteDocumentDirect(${doc.id}, this)" title="Delete Document">
                             <i data-lucide="trash-2"></i>
                         </button>
+                        ` : ''}
                     </div>
-                    ` : `<span class="text-muted">—</span>`}
                 </td>
             `;
             container.appendChild(row);
@@ -1523,7 +1529,7 @@ window.toggleMilestoneStatus = async function (milestoneId, newStatus, triggerBt
 
 window.deleteMilestoneDirect = async function (milestoneId, triggerBtn) {
     if (!checkAdminAccess("delete milestones")) return;
-    
+
     showConfirmModal(
         "Delete Milestone?",
         "Associated documents will not be deleted but will be detached.",
@@ -1567,7 +1573,7 @@ window.deleteMilestoneDirect = async function (milestoneId, triggerBtn) {
 
 window.deleteDocumentDirect = async function (documentId, triggerBtn) {
     if (!checkAdminAccess("delete documents")) return;
-    
+
     showConfirmModal(
         "Delete Document?",
         "This will permanently delete the file and remove it from the system.",
@@ -1695,7 +1701,7 @@ window.generateStoriesFromDocument = async function (projectId, documentId, docN
 
 window.regenerateStoriesFromDocument = async function (projectId, documentId, docName) {
     if (!checkAdminAccess("regenerate user stories")) return;
-    
+
     showConfirmModal(
         "Regenerate User Stories?",
         `Are you sure you want to regenerate stories from <strong>"${docName}"</strong>?<br><br><small>New stories will be added. Existing stories are kept but duplicates will be skipped automatically.</small>`,
@@ -2728,9 +2734,9 @@ function bindLogsEvents() {
         btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Refreshing...';
         btn.disabled = true;
         lucide.createIcons();
-        
+
         await loadActivityLogs();
-        
+
         btn.innerHTML = originalHtml;
         btn.disabled = false;
         lucide.createIcons();
@@ -2812,11 +2818,13 @@ async function populateProjectDropdowns(force = false) {
 
     try {
         if (!isPopulated || force || !state.projects || state.projects.length === 0) {
-            const res = await fetch(`${API_BASE}/api/projects`, {
-                headers: { "Authorization": `Bearer ${state.token}` }
-            });
-            const projects = await res.json();
-            state.projects = projects;
+            if (force !== "no-fetch") {
+                const res = await fetch(`${API_BASE}/api/projects`, {
+                    headers: { "Authorization": `Bearer ${state.token}` }
+                });
+                state.projects = await res.json();
+            }
+            const projects = state.projects || [];
 
             // Clear and build dropdown options ONCE
             if (uploadProjSelect) uploadProjSelect.innerHTML = '<option value="">-- Choose Project --</option>';
@@ -3010,7 +3018,7 @@ if (btnOpenStoryModal) btnOpenStoryModal.addEventListener("click", async () => {
 if (btnCloseStoryModal) btnCloseStoryModal.addEventListener("click", () => storyModal.classList.remove("active"));
 if (btnCancelStoryModal) btnCancelStoryModal.addEventListener("click", () => storyModal.classList.remove("active"));
 
-window.openSubtaskModal = async function(projectId, storyId) {
+window.openSubtaskModal = async function (projectId, storyId) {
     if (!checkAdminAccess("create tasks")) return;
     if (!projectId) return;
 
@@ -3018,10 +3026,10 @@ window.openSubtaskModal = async function(projectId, storyId) {
     if (storyForm) storyForm.reset();
 
     await populateParentStorySelect(projectId);
-    
+
     if (issueTypeSelect) issueTypeSelect.value = "subtask";
     updateIssueTypeFields();
-    
+
     const parentSelect = document.getElementById("subtask-parent-story-select");
     if (parentSelect) {
         parentSelect.value = storyId;
@@ -3415,13 +3423,13 @@ async function triggerOpenAssignAdminModal(e) {
     const searchEl = document.getElementById("assign-admin-search");
     const hiddenInput = document.getElementById("assign-admin-select");
     const displayEl = document.getElementById("assign-admin-display");
-    
+
     if (searchEl) searchEl.value = "";
     if (hiddenInput) hiddenInput.value = "";
     if (displayEl) displayEl.textContent = "-- Select Registered User --";
     if (displayEl) displayEl.style.color = "var(--color-text-muted)";
     if (dropdownEl) dropdownEl.style.display = "none";
-    
+
     if (triggerEl && !triggerEl.dataset.bound) {
         triggerEl.addEventListener("click", () => {
             const isVisible = dropdownEl.style.display === "block";
@@ -3430,7 +3438,7 @@ async function triggerOpenAssignAdminModal(e) {
                 setTimeout(() => searchEl.focus(), 50);
             }
         });
-        
+
         document.addEventListener("click", (e) => {
             const container = document.getElementById("assign-admin-custom-select");
             if (container && !container.contains(e.target)) {
@@ -3448,12 +3456,12 @@ async function triggerOpenAssignAdminModal(e) {
             });
             if (!res.ok) throw new Error("Could not fetch users list");
             const users = await res.json();
-            
+
             window.renderAdminSelect = (filterText = "") => {
                 optionsEl.innerHTML = '';
                 const lowerFilter = filterText.toLowerCase();
                 let hasResults = false;
-                
+
                 users.forEach(u => {
                     const adminTag = u.is_admin ? " [ADMIN]" : "";
                     const textContent = `${u.full_name} (${u.email})${adminTag}`;
@@ -3466,7 +3474,7 @@ async function triggerOpenAssignAdminModal(e) {
                         opt.style.cursor = "pointer";
                         opt.style.fontSize = "14px";
                         opt.style.transition = "var(--transition-fast)";
-                        
+
                         opt.addEventListener("mouseenter", () => {
                             opt.style.backgroundColor = "var(--color-primary-glow)";
                             opt.style.color = "var(--color-primary)";
@@ -3475,7 +3483,7 @@ async function triggerOpenAssignAdminModal(e) {
                             opt.style.backgroundColor = "transparent";
                             opt.style.color = "var(--color-text-main)";
                         });
-                        
+
                         opt.addEventListener("click", () => {
                             hiddenInput.value = u.id;
                             displayEl.textContent = textContent;
@@ -3485,7 +3493,7 @@ async function triggerOpenAssignAdminModal(e) {
                         optionsEl.appendChild(opt);
                     }
                 });
-                
+
                 if (!hasResults) {
                     optionsEl.innerHTML = '<div style="padding: 10px 14px; color: var(--color-text-muted);">No users found.</div>';
                 }
@@ -4435,7 +4443,7 @@ window.addStoryComment = async function (projectId, storyId) {
 
 window.deleteStory = async function (projectId, storyId, skipConfirm = false, skipReload = false) {
     if (!checkAdminAccess("delete user stories")) return;
-    
+
     const doDelete = async () => {
         try {
             const res = await fetch(`${API_BASE}/api/projects/${projectId}/stories/${storyId}`, {
@@ -4470,7 +4478,7 @@ window.deleteStory = async function (projectId, storyId, skipConfirm = false, sk
 
 window.deleteTask = async function (projectId, storyId, taskId) {
     if (!checkAdminAccess("delete tasks")) return;
-    
+
     showConfirmModal(
         "Delete Task?",
         "Are you sure you want to delete this task?",
@@ -4539,7 +4547,7 @@ window.addAcceptanceCriterion = async function (projectId, storyId) {
 
 window.removeAcceptanceCriterion = async function (projectId, storyId, idx) {
     if (!checkAdminAccess("edit story details")) return;
-    
+
     showConfirmModal(
         "Delete Criterion?",
         "Are you sure you want to delete this acceptance criterion?",
@@ -4549,15 +4557,15 @@ window.removeAcceptanceCriterion = async function (projectId, storyId, idx) {
             if (!story) return;
             const updatedACs = (story.acceptance_criteria || []).filter((_, i) => i !== idx);
             try {
-        await updateStoryField(projectId, storyId, 'acceptance_criteria', updatedACs);
-        await loadStories();
-        const refreshedStory = (state.stories || []).find(s => s.id === storyId);
-        if (refreshedStory) {
-            renderStoryDetail(projectId, refreshedStory);
-        }
-    } catch (e) {
-        showToast(e.message, "error");
-    }
+                await updateStoryField(projectId, storyId, 'acceptance_criteria', updatedACs);
+                await loadStories();
+                const refreshedStory = (state.stories || []).find(s => s.id === storyId);
+                if (refreshedStory) {
+                    renderStoryDetail(projectId, refreshedStory);
+                }
+            } catch (e) {
+                showToast(e.message, "error");
+            }
         },
         "danger"
     );
@@ -5101,34 +5109,34 @@ function openStoryDetailModal(projectId, storyId) {
 }
 window.openStoryDetailModal = openStoryDetailModal;
 
-window.openInlineUserPicker = function(event, roleType, storyId, taskId, projectId, isAdmin) {
+window.openInlineUserPicker = function (event, roleType, storyId, taskId, projectId, isAdmin) {
     if (!isAdmin) return;
-    
+
     event.stopPropagation();
-    
+
     const existing = document.getElementById('inline-user-picker');
     if (existing) existing.remove();
 
     const picker = document.createElement('div');
     picker.id = 'inline-user-picker';
     picker.style.cssText = 'position: absolute; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; z-index: 1050; box-shadow: var(--shadow-premium); display: flex; flex-direction: column; width: 220px; font-family: var(--font-family);';
-    
+
     const rect = event.currentTarget.getBoundingClientRect();
     picker.style.top = (window.scrollY + rect.bottom + 4) + 'px';
     picker.style.left = (window.scrollX + rect.left) + 'px';
 
     const searchWrapper = document.createElement('div');
     searchWrapper.style.cssText = 'padding: 8px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;';
-    
+
     const icon = document.createElement('i');
     icon.setAttribute('data-lucide', 'user');
     icon.style.cssText = 'width: 14px; height: 14px; color: var(--color-text-muted);';
-    
+
     const input = document.createElement('input');
     input.type = 'text';
     input.placeholder = 'Search users...';
     input.style.cssText = 'border: none; background: transparent; outline: none; width: 100%; font-size: 0.85rem; color: var(--color-text-main);';
-    
+
     searchWrapper.appendChild(icon);
     searchWrapper.appendChild(input);
     picker.appendChild(searchWrapper);
@@ -5139,26 +5147,26 @@ window.openInlineUserPicker = function(event, roleType, storyId, taskId, project
 
     const members = state.projectMembers || [];
     const isTaskAssignee = taskId && roleType === 'assignee';
-    
+
     const options = [
         { name: "Unassigned", value: "", icon: "user" }
     ];
-    
+
     const currentUser = state.user?.full_name;
     const currentUserId = state.user?.id;
-    
+
     if (currentUser) {
-        options.push({ 
-            name: `${currentUser} (Assign to me)`, 
-            value: isTaskAssignee ? currentUserId : currentUser, 
-            initial: currentUser.charAt(0).toUpperCase() 
+        options.push({
+            name: `${currentUser} (Assign to me)`,
+            value: isTaskAssignee ? currentUserId : currentUser,
+            initial: currentUser.charAt(0).toUpperCase()
         });
     }
 
     members.forEach(m => {
         if (m.user_name !== currentUser) {
-            options.push({ 
-                name: m.user_name, 
+            options.push({
+                name: m.user_name,
                 value: isTaskAssignee ? m.user_id : m.user_name,
                 initial: m.user_name.charAt(0).toUpperCase()
             });
@@ -5177,16 +5185,16 @@ window.openInlineUserPicker = function(event, roleType, storyId, taskId, project
             optDiv.style.cssText = `padding: 8px 12px; font-size: 0.85rem; color: var(--color-text-main); cursor: pointer; display: flex; align-items: center; gap: 8px;`;
             optDiv.onmouseover = () => { optDiv.style.background = 'var(--bg-base)'; };
             optDiv.onmouseout = () => { optDiv.style.background = 'transparent'; };
-            
+
             const avatarBg = o.value !== "" ? (roleType === 'assignee' ? '#10B981' : '#2563EB') : '#E2E8F0';
             const avatarColor = o.value !== "" ? '#fff' : '#475569';
-            
+
             const avatarHtml = `<span style="width: 20px; height: 20px; border-radius: 50%; background: ${avatarBg}; color: ${avatarColor}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; flex-shrink: 0;">
                 ${o.value !== "" ? o.initial : '<i data-lucide="user" style="width: 12px; height: 12px;"></i>'}
             </span>`;
-            
+
             optDiv.innerHTML = `${avatarHtml} <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${o.name}</span>`;
-            
+
             optDiv.onclick = (e) => {
                 e.stopPropagation();
                 picker.remove();
@@ -5220,7 +5228,7 @@ window.openInlineUserPicker = function(event, roleType, storyId, taskId, project
 
     input.oninput = (e) => renderOptions(e.target.value);
     picker.onclick = (e) => e.stopPropagation();
-    
+
     document.body.appendChild(picker);
     renderOptions("");
     input.focus();
@@ -5552,7 +5560,7 @@ async function loadTeamMembers(projectId) {
                 roleHTML = `
                     <select onchange="if(this.value.startsWith('custom_')) { window.promptCustomRole(this, () => { if(this.value.startsWith('custom_')) return; updateMemberRole(${projectId}, ${m.id}, '${m.user_email}', this.value); }); } else { updateMemberRole(${projectId}, ${m.id}, '${m.user_email}', this.value); }" style="background: ${roleColor}15; color: ${roleColor}; border: 1px solid ${roleColor}40; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; outline: none; cursor: pointer;">
                         <option value="${m.role.replace(/"/g, '&quot;')}" selected>${m.role}</option>
-                        ${['Frontend','Backend','AI','QA','Manager'].filter(x=>x!==m.role).map(x=>`<option value="${x}">${x}</option>`).join('')}
+                        ${['Frontend', 'Backend', 'AI', 'QA', 'Manager'].filter(x => x !== m.role).map(x => `<option value="${x}">${x}</option>`).join('')}
                         <option disabled>──────────</option>
                         <option value="custom_add_new" style="font-weight: 700; color: #0ea5e9;">+ Add Custom Role...</option>
                         <option value="custom_remove_role" style="font-weight: 700; color: #ef4444;">- Remove Custom Role...</option>
@@ -5687,7 +5695,7 @@ document.getElementById("btn-auto-assign")?.addEventListener("click", async (e) 
 
 window.removeTeamMember = async function (projectId, memberId) {
     if (!checkAdminAccess("remove team members")) return;
-    
+
     showConfirmModal(
         "Remove Team Member?",
         "Are you sure you want to remove this team member? Their tasks will be unassigned.",
@@ -5752,9 +5760,9 @@ document.getElementById("btn-refresh-mytasks")?.addEventListener("click", async 
     btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Refreshing...';
     btn.disabled = true;
     lucide.createIcons();
-    
+
     await loadMyTasks();
-    
+
     btn.innerHTML = originalHtml;
     btn.disabled = false;
     lucide.createIcons();
@@ -5873,16 +5881,16 @@ function createMyTaskCard(task) {
         if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT' || e.target.closest('select')) {
             return;
         }
-        
+
         state.globalProjectId = task.project_id;
         localStorage.setItem("globalProjectId", task.project_id);
-        
+
         const globalSelect = document.getElementById("global-project-select");
         if (globalSelect) globalSelect.value = task.project_id;
-        
+
         const storySelect = document.getElementById("story-project-select");
         if (storySelect) storySelect.value = task.project_id;
-        
+
         state.selectedStoryId = task.story_id;
         window.location.hash = "stories";
     };
@@ -6129,9 +6137,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function bindUserProfileMenu() {
     const toggleBtn = document.getElementById("user-badge-menu-toggle");
     const menu = document.getElementById("user-account-menu");
-    
+
     if (!toggleBtn || !menu) return;
-    
+
     toggleBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         const isHidden = menu.style.display === "none";
@@ -6142,7 +6150,7 @@ function bindUserProfileMenu() {
             toggleBtn.style.background = "var(--bg-surface)";
         }
     });
-    
+
     document.addEventListener("click", (e) => {
         if (!e.target.closest("#user-badge-menu-toggle") && !e.target.closest("#user-account-menu")) {
             menu.style.display = "none";
@@ -6332,11 +6340,11 @@ document.addEventListener("click", (e) => {
 document.addEventListener("submit", async (e) => {
     if (e.target.id === "edit-project-form") {
         e.preventDefault();
-        
+
         const form = e.target;
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn && submitBtn.disabled) return;
-        
+
         if (!state.currentProject) return;
 
         const name = document.getElementById("edit-project-name").value;
@@ -6369,7 +6377,7 @@ document.addEventListener("submit", async (e) => {
                 modal.style.display = "none";
                 modal.classList.remove("active");
             }
-            
+
             // Reload project details
             openProjectDetail(state.currentProject.id);
             loadWorkspaceData(); // Refresh sidebar project name
@@ -6398,8 +6406,8 @@ document.addEventListener("click", (e) => {
     const selProjId = document.getElementById("global-project-select")?.value;
     const detailTitle = document.getElementById("detail-project-title")?.textContent?.trim();
 
-    let targetDeleteProject = state.currentProject 
-        || state.projects?.find(p => p.id == state.globalProjectId) 
+    let targetDeleteProject = state.currentProject
+        || state.projects?.find(p => p.id == state.globalProjectId)
         || state.projects?.find(p => p.id == selProjId);
 
     if (!targetDeleteProject && detailTitle && detailTitle !== "Project Name") {
@@ -6425,12 +6433,12 @@ document.addEventListener("click", (e) => {
     if (nameDisplay) nameDisplay.textContent = targetDeleteProject.name;
     if (codeConfirm) codeConfirm.textContent = targetDeleteProject.name;
     if (deleteConfirmInput) deleteConfirmInput.value = "";
-    
+
     if (deleteStatusMsg) {
         deleteStatusMsg.innerHTML = `Type <strong>${targetDeleteProject.name}</strong> above to unlock the delete button.`;
         deleteStatusMsg.style.color = '#dc2626';
     }
-    
+
     if (deleteConfirmSubmit) {
         deleteConfirmSubmit.disabled = true;
         deleteConfirmSubmit.style.opacity = "0.5";

@@ -10,12 +10,12 @@ class FileStorageService:
         self.use_supabase = bool(settings.SUPABASE_URL and settings.SUPABASE_KEY)
         
         if self.use_supabase:
-            print("[ProjectHub] Supabase credentials detected. Enabling Cloud Storage mode.")
+            print("[Sprint AI] Supabase credentials detected. Enabling Cloud Storage mode.")
             from supabase import create_client, Client
             self.supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
             self.bucket_name = "documents"
         else:
-            print("[ProjectHub] Supabase credentials missing. Falling back to Local Storage mode.")
+            print("[Sprint AI] Supabase credentials missing. Falling back to Local Storage mode.")
             # Ensure local uploads directory exists
             os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
@@ -117,16 +117,16 @@ class FileStorageService:
                     paths = [f"{folder_prefix}/{f['name']}" for f in files if f.get('name')]
                     if paths:
                         self.supabase.storage.from_(self.bucket_name).remove(paths)
-                print(f"[ProjectHub] Purged Supabase Storage folder: {folder_prefix}/")
+                print(f"[Sprint AI] Purged Supabase Storage folder: {folder_prefix}/")
                 return True
             else:
                 folder_path = os.path.join(settings.UPLOAD_DIR, folder_prefix)
                 if os.path.isdir(folder_path):
                     shutil.rmtree(folder_path)
-                    print(f"[ProjectHub] Purged local storage folder: {folder_path}")
+                    print(f"[Sprint AI] Purged local storage folder: {folder_path}")
                 return True
         except Exception as e:
-            print(f"[ProjectHub] Error purging project folder {folder_prefix}: {str(e)}")
+            print(f"[Sprint AI] Error purging project folder {folder_prefix}: {str(e)}")
             return False
 
     def cleanup_orphan_folders(self, existing_project_ids: set) -> int:
@@ -160,7 +160,7 @@ class FileStorageService:
                             except ValueError:
                                 pass
         except Exception as e:
-            print(f"[ProjectHub] Error scanning orphan storage folders: {str(e)}")
+            print(f"[Sprint AI] Error scanning orphan storage folders: {str(e)}")
         return purged_count
 
     def get_local_path(self, file_path: str) -> str:

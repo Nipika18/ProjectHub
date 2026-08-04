@@ -90,7 +90,7 @@ def get_neon_auth_url():
 
 
 def validate_corporate_domain(email: str):
-    """Allows any valid email address to access or register in ProjectHub."""
+    """Allows any valid email address to access or register in SprintAi."""
     if not email or "@" not in email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -131,7 +131,7 @@ def register(user_in: schemas.UserCreate, request: Request, db: Session = Depend
         verify_url = f"{origin}/api/auth/verify-email?token={token}"
         send_verification_email(user_in.email, payload["full_name"], verify_url)
     except Exception as e:
-        print(f"[ProjectHub] Verification email dispatch error: {e}")
+        print(f"[SprintAi] Verification email dispatch error: {e}")
 
     return {
         "detail": "Verification email sent! Please check your inbox and click the link to complete registration.",
@@ -252,9 +252,9 @@ def invite_user(
                 try:
                     from backend.app.services.email_service import send_project_added_email
                     send_project_added_email(user.email, user.full_name, project.name, invite_in.role or "Frontend")
-                    print(f"[ProjectHub] Sent project assignment email to existing user {user.email}")
+                    print(f"[SprintAi] Sent project assignment email to existing user {user.email}")
                 except Exception as e:
-                    print(f"[ProjectHub] SMTP error sending project assignment email to existing user: {e}")
+                    print(f"[SprintAi] SMTP error sending project assignment email to existing user: {e}")
         return {"detail": f"Existing user '{user.full_name}' assigned to project '{assigned_project}'." if assigned_project else f"User '{user.full_name}' already exists."}
 
     # User does NOT exist in DB -> Create stateless invitation token
@@ -278,9 +278,9 @@ def invite_user(
         token = create_verification_token(payload)
         confirm_url = f"{origin}/api/auth/verify-email?token={token}"
         send_invite_email(invite_in.email, invite_in.full_name, pwd, confirm_url)
-        print(f"[ProjectHub] Stateless invite email sent to {invite_in.email}")
+        print(f"[SprintAi] Stateless invite email sent to {invite_in.email}")
     except Exception as e:
-        print(f"[ProjectHub] SMTP invite email error: {e}")
+        print(f"[SprintAi] SMTP invite email error: {e}")
         raise HTTPException(status_code=500, detail="Failed to send invitation email. Please check server email configuration.")
 
     log_activity(db, current_admin.id, "register_user", f"Admin sent stateless invite to: {invite_in.full_name} ({invite_in.email})")
@@ -381,13 +381,23 @@ def login(login_in: schemas.UserLogin, request: Request, db: Session = Depends(g
     
     user = db.query(User).filter(User.email == login_in.email).first()
     
-    if not user or not verify_password(login_in.password, user.hashed_password):
+    if not user:
         record_failed_login(login_in.email)
         ip = get_client_ip(request)
-        log_activity(db, None, "failed_login", f"Failed login attempt for {login_in.email} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
+        log_activity(db, None, "failed_login", f"Login attempt for non-existent account {login_in.email} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Account not found. Please sign up first.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+    if not verify_password(login_in.password, user.hashed_password):
+        record_failed_login(login_in.email)
+        ip = get_client_ip(request)
+        log_activity(db, None, "failed_login", f"Incorrect password for {login_in.email} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -432,9 +442,9 @@ def login_form(request: Request, form_data: OAuth2PasswordRequestForm = Depends(
             )
             if auth_res.status_code == 200:
                 neon_auth_ok = True
-                print(f"[ProjectHub] Neon Auth login successful for {form_data.username}")
+                print(f"[SprintAi] Neon Auth login successful for {form_data.username}")
         except Exception as e:
-            print(f"[ProjectHub] Neon sign_in notice/error: {e}")
+            print(f"[SprintAi] Neon sign_in notice/error: {e}")
     
     if not neon_auth_ok:
         if not user or not verify_password(form_data.password, user.hashed_password):
@@ -459,6 +469,12 @@ def login_form(request: Request, form_data: OAuth2PasswordRequestForm = Depends(
         else:
             user.hashed_password = get_password_hash(form_data.password)
             db.commit()
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please check your inbox and verify your email address before logging in."
+        )
 
     record_successful_login(form_data.username)
     access_token = create_access_token(data={"sub": user.email})
@@ -573,11 +589,11 @@ def forgot_password(req: schemas.PasswordResetRequest, request: Request, db: Ses
             headers={"Origin": origin},
             timeout=10
         )
-        print(f"[ProjectHub] Password reset email triggered via Neon Auth for {req.email}: {res.status_code}")
+        print(f"[SprintAi] Password reset email triggered via Neon Auth for {req.email}: {res.status_code}")
         
         if res.status_code >= 400:
             err_msg = res.json().get("message", res.text) if "application/json" in res.headers.get("Content-Type", "") else res.text
-            print(f"[ProjectHub] Neon Auth error: {err_msg}")
+            print(f"[SprintAi] Neon Auth error: {err_msg}")
             if "user not found" not in err_msg.lower():
                 raise Exception(f"Neon API Error: {err_msg}")
                 
@@ -585,7 +601,7 @@ def forgot_password(req: schemas.PasswordResetRequest, request: Request, db: Ses
         return {"detail": "If an account exists with this email, a password reset link has been sent to your inbox."}
     except Exception as e:
         err_msg = str(e)
-        print(f"[ProjectHub] Forgot password error via Neon Auth: {err_msg}")
+        print(f"[SprintAi] Forgot password error via Neon Auth: {err_msg}")
         raise HTTPException(
             status_code=400,
             detail=f"Could not send password reset link: {err_msg}"
@@ -653,16 +669,16 @@ def reset_password(req: schemas.PasswordResetConfirm, request: Request, db: Sess
             if user:
                 user.hashed_password = get_password_hash(req.new_password)
                 db.commit()
-                print(f"[ProjectHub] Local password hash updated for {neon_email}")
+                print(f"[SprintAi] Local password hash updated for {neon_email}")
 
         log_activity(db, None, "password_reset_complete", f"Password reset completed via Neon Auth [IP: {ip}]")
-        print(f"[ProjectHub] Password reset successfully completed via Neon Auth")
+        print(f"[SprintAi] Password reset successfully completed via Neon Auth")
         return {"detail": "Password has been reset successfully. You can now log in with your new password."}
     except HTTPException:
         raise
     except Exception as e:
         err_msg = str(e)
-        print(f"[ProjectHub] Reset password error: {err_msg}")
+        print(f"[SprintAi] Reset password error: {err_msg}")
         raise HTTPException(
             status_code=400,
             detail=f"Could not reset password: {err_msg}"

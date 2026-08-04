@@ -11,7 +11,7 @@ def _dispatch_email(to_email: str, subject: str, html_content: str):
     """Helper to send an email via SMTP or print to log in local dev."""
     if not is_smtp_configured():
         print("=" * 60)
-        print(f"[ProjectHub Local Dev Email] SMTP not configured.")
+        print(f"[Sprint AI Local Dev Email] SMTP not configured.")
         print(f"To: {to_email}")
         print(f"Subject: {subject}")
         print("Body preview / links included in HTML content.")
@@ -34,14 +34,14 @@ def _dispatch_email(to_email: str, subject: str, html_content: str):
         server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         server.sendmail(settings.SENDER_EMAIL, to_email, msg.as_string())
         server.quit()
-        print(f"[ProjectHub] Successfully sent email '{subject}' to {to_email}")
+        print(f"[Sprint AI] Successfully sent email '{subject}' to {to_email}")
     except Exception as e:
-        print(f"[ProjectHub] Failed to send email via SMTP: {str(e)}")
+        print(f"[Sprint AI] Failed to send email via SMTP: {str(e)}")
         raise e
 
 def send_verification_email(email: str, full_name: str, verify_url: str):
     """Sends account email verification link to self-registered user with bulletproof inline styles."""
-    subject = "Verify your ProjectHub Account"
+    subject = "Verify your Sprint AI Account"
     
     html_content = f"""
     <!DOCTYPE html>
@@ -59,7 +59,7 @@ def send_verification_email(email: str, full_name: str, verify_url: str):
                 <!-- Header -->
                 <tr>
                   <td style="background-color:#1e40af; padding:30px 40px; text-align:center;">
-                    <h1 style="color:#ffffff; margin:0; font-size:26px; font-weight:700; letter-spacing:-0.5px;">ProjectHub</h1>
+                    <h1 style="color:#ffffff; margin:0; font-size:26px; font-weight:700; letter-spacing:-0.5px;">Sprint AI</h1>
                   </td>
                 </tr>
 
@@ -67,7 +67,7 @@ def send_verification_email(email: str, full_name: str, verify_url: str):
                 <tr>
                   <td style="padding:40px; color:#374151; font-size:16px; line-height:1.6;">
                     <p style="margin-top:0; font-size:18px; font-weight:600; color:#111827;">Hi {full_name},</p>
-                    <p style="margin-bottom:24px; color:#4b5563;">Welcome to ProjectHub! Please confirm your email address by clicking the button below to activate your account and start collaborating.</p>
+                    <p style="margin-bottom:24px; color:#4b5563;">Welcome to Sprint AI! Please confirm your email address by clicking the button below to activate your account and start collaborating.</p>
 
                     <!-- Button Container -->
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:30px 0;">
@@ -90,7 +90,7 @@ def send_verification_email(email: str, full_name: str, verify_url: str):
                 <!-- Footer -->
                 <tr>
                   <td style="background-color:#f9fafb; padding:20px 40px; text-align:center; border-top:1px solid #f3f4f6;">
-                    <p style="margin:0; font-size:12px; color:#9ca3af;">If you did not register for a ProjectHub account, you can safely ignore this email.</p>
+                    <p style="margin:0; font-size:12px; color:#9ca3af;">If you did not register for a Sprint AI account, you can safely ignore this email.</p>
                   </td>
                 </tr>
 
@@ -103,12 +103,12 @@ def send_verification_email(email: str, full_name: str, verify_url: str):
     """
     
     if not is_smtp_configured():
-        print(f"[ProjectHub Local Dev] Verification URL for {email}: {verify_url}")
+        print(f"[Sprint AI Local Dev] Verification URL for {email}: {verify_url}")
     _dispatch_email(email, subject, html_content)
 
 def send_invite_email(email: str, full_name: str, password: str, confirm_url: str):
     """Sends invitation email with temporary credentials and bulletproof inline button styles."""
-    subject = "You've been invited to ProjectHub!"
+    subject = "You've been invited to Sprint AI!"
     
     html_content = f"""
     <!DOCTYPE html>
@@ -126,7 +126,7 @@ def send_invite_email(email: str, full_name: str, password: str, confirm_url: st
                 <!-- Header -->
                 <tr>
                   <td style="background-color:#1e40af; padding:30px 40px; text-align:center;">
-                    <h1 style="color:#ffffff; margin:0; font-size:26px; font-weight:700; letter-spacing:-0.5px;">ProjectHub</h1>
+                    <h1 style="color:#ffffff; margin:0; font-size:26px; font-weight:700; letter-spacing:-0.5px;">Sprint AI</h1>
                   </td>
                 </tr>
 
@@ -134,7 +134,7 @@ def send_invite_email(email: str, full_name: str, password: str, confirm_url: st
                 <tr>
                   <td style="padding:40px; color:#374151; font-size:16px; line-height:1.6;">
                     <p style="margin-top:0; font-size:18px; font-weight:600; color:#111827;">Hi {full_name},</p>
-                    <p style="margin-bottom:20px; color:#4b5563;">You have been invited to collaborate on a workspace in ProjectHub!</p>
+                    <p style="margin-bottom:20px; color:#4b5563;">You have been invited to collaborate on a workspace in Sprint AI!</p>
                     <p style="margin-bottom:20px; color:#4b5563;">An account has been created for you with temporary credentials below:</p>
 
                     <!-- Credentials Box -->
@@ -177,12 +177,12 @@ def send_invite_email(email: str, full_name: str, password: str, confirm_url: st
     """
 
     if not is_smtp_configured():
-        print(f"[ProjectHub Local Dev] Invitation Confirmation URL for {email}: {confirm_url}")
+        print(f"[Sprint AI Local Dev] Invitation Confirmation URL for {email}: {confirm_url}")
     _dispatch_email(email, subject, html_content)
 
 def send_project_added_email(email: str, full_name: str, project_name: str, role: str):
     """Sends an email notification when an existing user is added to a project team."""
-    subject = f"You've been added to project '{project_name}' on ProjectHub"
+    subject = f"You've been added to project '{project_name}' on Sprint AI"
     
     html_content = f"""
     <!DOCTYPE html>
@@ -200,7 +200,7 @@ def send_project_added_email(email: str, full_name: str, project_name: str, role
                 <!-- Header -->
                 <tr>
                   <td style="background-color:#1e40af; padding:30px 40px; text-align:center;">
-                    <h1 style="color:#ffffff; margin:0; font-size:26px; font-weight:700; letter-spacing:-0.5px;">ProjectHub</h1>
+                    <h1 style="color:#ffffff; margin:0; font-size:26px; font-weight:700; letter-spacing:-0.5px;">Sprint AI</h1>
                   </td>
                 </tr>
 
@@ -226,7 +226,7 @@ def send_project_added_email(email: str, full_name: str, project_name: str, role
                 <!-- Footer -->
                 <tr>
                   <td style="background-color:#f9fafb; padding:20px 40px; text-align:center; border-top:1px solid #f3f4f6;">
-                    <p style="margin:0; font-size:12px; color:#9ca3af;">ProjectHub Team Collaboration</p>
+                    <p style="margin:0; font-size:12px; color:#9ca3af;">Sprint AI Team Collaboration</p>
                   </td>
                 </tr>
 
@@ -239,12 +239,12 @@ def send_project_added_email(email: str, full_name: str, project_name: str, role
     """
 
     if not is_smtp_configured():
-        print(f"[ProjectHub Local Dev] Project Added email for {email} in project '{project_name}'")
+        print(f"[Sprint AI Local Dev] Project Added email for {email} in project '{project_name}'")
     _dispatch_email(email, subject, html_content)
 
 def send_password_reset_email(email: str, full_name: str, reset_url: str):
     """Sends password reset email with recovery link."""
-    subject = "Reset your ProjectHub password"
+    subject = "Reset your Sprint AI password"
     
     html_content = f"""
     <!DOCTYPE html>
@@ -261,14 +261,14 @@ def send_password_reset_email(email: str, full_name: str, reset_url: str):
                 
                 <tr>
                   <td style="background-color:#1e40af; padding:30px 40px; text-align:center;">
-                    <h1 style="color:#ffffff; margin:0; font-size:26px; font-weight:700;">ProjectHub</h1>
+                    <h1 style="color:#ffffff; margin:0; font-size:26px; font-weight:700;">Sprint AI</h1>
                   </td>
                 </tr>
 
                 <tr>
                   <td style="padding:40px; color:#374151; font-size:16px; line-height:1.6;">
                     <p style="margin-top:0; font-size:18px; font-weight:600; color:#111827;">Hi {full_name},</p>
-                    <p style="margin-bottom:20px; color:#4b5563;">You requested a password reset for your ProjectHub account. Click the button below to reset your password:</p>
+                    <p style="margin-bottom:20px; color:#4b5563;">You requested a password reset for your Sprint AI account. Click the button below to reset your password:</p>
 
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:30px 0;">
                       <tr>
@@ -302,6 +302,6 @@ def send_password_reset_email(email: str, full_name: str, reset_url: str):
     """
 
     if not is_smtp_configured():
-        print(f"[ProjectHub Local Dev] Password Reset URL for {email}: {reset_url}")
+        print(f"[Sprint AI Local Dev] Password Reset URL for {email}: {reset_url}")
     _dispatch_email(email, subject, html_content)
 

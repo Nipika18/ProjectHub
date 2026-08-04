@@ -151,7 +151,7 @@ async def upload_document(
             storage_service.delete_file(committed_doc.file_path)
             db.delete(committed_doc)  # CASCADE removes chunks + linked stories
             db.commit()
-        print(f"[ProjectHub] Reversed committed upload for '{new_doc.name}' — client cancelled after server finished.")
+        print(f"[Sprint AI] Reversed committed upload for '{new_doc.name}' — client cancelled after server finished.")
         raise HTTPException(status_code=499, detail="Upload cancelled by client after processing; cleaned up.")
 
     # Step 6: Log Activity

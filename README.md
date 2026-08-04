@@ -1,6 +1,6 @@
-# ProjectHub — Multi-Tenant RAG & Agile Project Intelligence Platform
+# Sprint AI — Multi-Tenant RAG & Agile Project Intelligence Platform
 
-ProjectHub is a multi-tenant project intelligence web application built with **FastAPI (Python)**, **PostgreSQL/pgvector**, and a responsive vanilla **HTML/CSS/JavaScript** single-page application.
+Sprint AI is a multi-tenant project intelligence web application built with **FastAPI (Python)**, **PostgreSQL/pgvector**, and a responsive vanilla **HTML/CSS/JavaScript** single-page application.
 
 It integrates two core capabilities:
 1. **AI Document Chatbot (RAG)**: Offers hybrid search (pgvector HNSW Cosine + tsvector Full-Text Keyword via Reciprocal Rank Fusion) and streaming Server-Sent Events (SSE) with citations.

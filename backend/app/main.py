@@ -16,12 +16,12 @@ async def lifespan(app: FastAPI):
     enables pgvector, and creates all tables.
     """
     try:
-        print("[ProjectHub] Initializing PostgreSQL Database and pgvector extension...")
+        print("[Sprint AI] Initializing PostgreSQL Database and pgvector extension...")
         init_db()
-        print("[ProjectHub] Database initialization successful!")
+        print("[Sprint AI] Database initialization successful!")
     except Exception as e:
-        print(f"[ProjectHub] Database initialization FAILED: {str(e)}")
-        print("[ProjectHub] Make sure PostgreSQL is running and credentials in .env are correct.")
+        print(f"[Sprint AI] Database initialization FAILED: {str(e)}")
+        print("[Sprint AI] Make sure PostgreSQL is running and credentials in .env are correct.")
     
     # Create the local uploads storage folder if it doesn't exist
     from backend.app.core.config import settings
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
     try:
         _purge_orphans()
     except Exception as e:
-        print(f"[ProjectHub] Orphan purge skipped (non-fatal): {e}")
+        print(f"[Sprint AI] Orphan purge skipped (non-fatal): {e}")
     
     yield
 
@@ -64,12 +64,12 @@ def _purge_orphans():
                 storage_service.delete_file(doc.file_path)
                 db.delete(doc)  # CASCADE deletes associated document_chunks and user_stories
             db.commit()
-            print(f"[ProjectHub] Auto-purged {len(orphaned_docs)} orphan document(s) from {len(orphan_project_ids)} deleted project(s).")
+            print(f"[Sprint AI] Auto-purged {len(orphaned_docs)} orphan document(s) from {len(orphan_project_ids)} deleted project(s).")
 
         # 3. Always clean up orphan storage folders (proj_X/) in Supabase or Local Storage
         purged_folders = storage_service.cleanup_orphan_folders(existing_project_ids)
         if purged_folders > 0:
-            print(f"[ProjectHub] Auto-purged {purged_folders} orphan storage folder(s).")
+            print(f"[Sprint AI] Auto-purged {purged_folders} orphan storage folder(s).")
 
         # 4. Additionally, purge any documents that have zero chunks (incomplete / failed uploads)
         from sqlalchemy import func
@@ -80,7 +80,7 @@ def _purge_orphans():
                 storage_service.delete_file(doc.file_path)
                 db.delete(doc)
             db.commit()
-            print(f"[ProjectHub] Auto-purged {len(incomplete_docs)} incomplete document(s) with no chunks.")
+            print(f"[Sprint AI] Auto-purged {len(incomplete_docs)} incomplete document(s) with no chunks.")
 
 
         # 5. Find orphaned stories (project was deleted but user stories remain)
@@ -92,11 +92,11 @@ def _purge_orphans():
             for story in orphaned_stories:
                 db.delete(story)  # CASCADE deletes associated tasks
             db.commit()
-            print(f"[ProjectHub] Auto-purged {len(orphaned_stories)} orphan user story/stories from deleted project(s).")
+            print(f"[Sprint AI] Auto-purged {len(orphaned_stories)} orphan user story/stories from deleted project(s).")
 
     except Exception as e:
         db.rollback()
-        print(f"[ProjectHub] Orphan purge error: {e}")
+        print(f"[Sprint AI] Orphan purge error: {e}")
     finally:
         db.close()
 

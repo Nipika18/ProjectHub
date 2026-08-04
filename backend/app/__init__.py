@@ -1,1 +1,1 @@
-# ProjectHub Python Package
+# Sprint AI Python Package

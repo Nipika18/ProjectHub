@@ -19,10 +19,10 @@ class Settings(BaseSettings):
     SMTP_USER: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
     SENDER_EMAIL: Optional[str] = None
-    SENDER_NAME: str = "ProjectHub"
+    SENDER_NAME: str = "Sprint AI"
     
     # Application Base URL for Email Links
-    APP_URL: str = "http://sprintai.softprodigy.in"
+    APP_URL: str = "http://localhost:8000"
     
     # JWT Auth Configuration
     SECRET_KEY: str
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     
     # Storage Directory (Local Fallback)
     UPLOAD_DIR: str = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 
         "uploads"
     )
 
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     LANGSMITH_TRACING: str = "true"
     LANGSMITH_ENDPOINT: str = "https://api.smith.langchain.com"
     LANGSMITH_API_KEY: Optional[str] = None
-    LANGSMITH_PROJECT: str = "Projecthub"
+    LANGSMITH_PROJECT: str = "Sprint AI"
 
     model_config = SettingsConfigDict(
         env_file=".env", 
@@ -63,7 +63,7 @@ if settings.LANGSMITH_API_KEY:
     os.environ["LANGCHAIN_PROJECT"] = settings.LANGSMITH_PROJECT
 
 _masked_db = settings.DATABASE_URL.split('@')[-1] if '@' in settings.DATABASE_URL else '(local)'
-print(f"[ProjectHub] Loaded DATABASE_URL from environment/.env: ...@{_masked_db}")
+print(f"[Sprint AI] Loaded DATABASE_URL from environment/.env: ...@{_masked_db}")
 if settings.LANGSMITH_API_KEY:
-    print(f"[ProjectHub] LangSmith Observability enabled for project '{settings.LANGSMITH_PROJECT}'")
+    print(f"[Sprint AI] LangSmith Observability enabled for project '{settings.LANGSMITH_PROJECT}'")
 
