@@ -8,9 +8,11 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str
     OPENAI_MODEL: str = "gpt-4o-mini"
     
-    # Supabase Cloud Storage (Optional)
-    SUPABASE_URL: Optional[str] = None
-    SUPABASE_KEY: Optional[str] = None
+    # AWS S3 Cloud Storage (Optional)
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_REGION: str = "us-east-1"
+    AWS_S3_BUCKET_NAME: Optional[str] = None
     NEON_AUTH_URL: Optional[str] = None
     
     # SMTP Configuration for Local Emails

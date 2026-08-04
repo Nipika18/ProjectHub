@@ -2059,7 +2059,7 @@ async function handleFileUpload(file) {
     percentLabel.textContent = "0%";
     fill.style.width = "0%";
     statusLabel.className = "progress-status"; // Reset class list
-    statusLabel.innerHTML = '<i data-lucide="loader" class="spin"></i> Indexing text into vectors... Please wait.';
+    statusLabel.innerHTML = '<i data-lucide="loader" class="spin"></i> Analyzing document with AI... Please wait.';
     progressContainer.classList.remove("hidden");
     lucide.createIcons();
 

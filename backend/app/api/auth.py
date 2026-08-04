@@ -711,34 +711,43 @@ async def upload_avatar(
     import uuid
 
     ext = os.path.splitext(file.filename or "avatar.jpg")[1].lower() or ".jpg"
-    filename = f"{uuid.uuid4().hex}{ext}"
+    # Include the user ID in the filename so they are easily identifiable in S3!
+    filename = f"user_{current_user.id}_{uuid.uuid4().hex}{ext}"
     relative_url = ""
 
-    if storage_service.use_supabase:
-        supabase_path = f"{filename}"
+    if hasattr(storage_service, 'use_s3') and storage_service.use_s3:
+        s3_path = f"avatars/{filename}"
         try:
-            # Try to delete the old avatar from Supabase if it exists
-            if current_user.profile_image and "/storage/v1/object/public/" in current_user.profile_image:
-                old_filename = current_user.profile_image.split("/")[-1]
+            # Delete the old avatar from S3 so they don't pile up!
+            if current_user.profile_image and "amazonaws.com" in current_user.profile_image:
                 try:
-                    if "documents/avatars" in current_user.profile_image:
-                        storage_service.supabase.storage.from_("documents").remove([f"avatars/{old_filename}"])
-                    else:
-                        storage_service.supabase.storage.from_("avatars").remove([f"{old_filename}"])
+                    # Extract just the filename (e.g. uuid.jpg) from the long presigned URL
+                    old_filename = current_user.profile_image.split('?')[0].split('/')[-1]
+                    storage_service.s3_client.delete_object(
+                        Bucket=storage_service.bucket_name,
+                        Key=f"avatars/{old_filename}"
+                    )
                 except Exception:
                     pass
-
-            # Upload the new avatar to the dedicated public 'avatars' bucket
-            storage_service.supabase.storage.from_("avatars").upload(
-                supabase_path,
-                contents,
-                {"content-type": file.content_type}
+            
+            # Upload the new avatar to the S3 bucket under 'avatars/' prefix
+            storage_service.s3_client.put_object(
+                Bucket=storage_service.bucket_name,
+                Key=s3_path,
+                Body=contents,
+                ContentType=file.content_type
             )
-            # Use the public URL directly
-            relative_url = storage_service.supabase.storage.from_("avatars").get_public_url(supabase_path)
+            
+            # Generate a pre-signed URL (valid for 7 days) so the frontend can display it
+            # even though the bucket is private!
+            relative_url = storage_service.s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': storage_service.bucket_name, 'Key': s3_path},
+                ExpiresIn=604800
+            )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to upload avatar to Supabase: {str(e)}")
-    else:
+            raise HTTPException(status_code=500, detail=f"Failed to upload avatar to S3: {str(e)}")
+    elif not getattr(storage_service, 'use_s3', False):
         # Create folder if needed
         os.makedirs(AVATAR_UPLOAD_DIR, exist_ok=True)
         save_path = os.path.join(AVATAR_UPLOAD_DIR, filename)

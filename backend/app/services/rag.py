@@ -269,7 +269,7 @@ class RAGService:
             return False
         finally:
             # Clean up temp file if we are in Cloud Storage mode
-            if storage_service.use_supabase:
+            if hasattr(storage_service, 'use_s3') and storage_service.use_s3:
                 try:
                     if os.path.exists(physical_path):
                         os.remove(physical_path)

@@ -278,10 +278,11 @@ def download_document(
         if not is_owner and not is_member:
             raise HTTPException(status_code=403, detail="You do not have access to download this document.")
 
-    if storage_service.use_supabase:
+    if hasattr(storage_service, 'use_s3') and storage_service.use_s3:
         try:
             # Download file bytes securely using private server credentials
-            file_bytes = storage_service.supabase.storage.from_(storage_service.bucket_name).download(doc.file_path)
+            response = storage_service.s3_client.get_object(Bucket=storage_service.bucket_name, Key=doc.file_path)
+            file_bytes = response['Body'].read()
             
             # Determine content-type
             media_type = "application/octet-stream"
