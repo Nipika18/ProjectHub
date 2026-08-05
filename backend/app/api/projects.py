@@ -75,18 +75,25 @@ def list_projects(
     """
     if current_user.is_admin:
         projects = db.query(Project).order_by(Project.created_at.desc()).all()
+        for p in projects:
+            p.user_role = "Admin"
     else:
-        # Get project IDs where the user is a member
-        member_project_ids = db.query(ProjectMember.project_id).filter(
-            ProjectMember.user_id == current_user.id
-        ).subquery()
+        # Get all memberships for this user in one query to prevent N+1 queries
+        user_memberships = db.query(ProjectMember).filter(ProjectMember.user_id == current_user.id).all()
+        role_map = {m.project_id: m.role for m in user_memberships}
+        member_project_ids = list(role_map.keys())
 
         projects = db.query(Project).filter(
             (Project.owner_id == current_user.id) | (Project.id.in_(member_project_ids))
         ).order_by(Project.created_at.desc()).all()
 
-    for p in projects:
-        populate_user_role(db, current_user, p)
+        # Assign roles in memory
+        for p in projects:
+            if p.owner_id == current_user.id:
+                p.user_role = "Manager"
+            else:
+                p.user_role = role_map.get(p.id)
+
     return projects
 
 @router.get("/{project_id}", response_model=schemas.Project)

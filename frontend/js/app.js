@@ -1312,6 +1312,15 @@ async function openProjectDetail(projectId) {
         state.currentProject = project;
         updateSidebarProjectsLink();
 
+        // Keep the global active project selector perfectly in sync
+        const globalSelect = document.getElementById("global-project-select");
+        if (globalSelect) {
+            globalSelect.value = projectId;
+            state.globalProjectId = projectId;
+            localStorage.setItem("globalProjectId", projectId);
+            globalSelect.classList.add("selected-bold");
+        }
+
         // Populate detail panels
         document.getElementById("detail-project-title").textContent = project.name;
         document.getElementById("detail-project-desc").textContent = project.description || "No description provided.";
