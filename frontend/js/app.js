@@ -1740,8 +1740,16 @@ window.downloadDocumentSecurely = async function (documentId, fileName) {
         const res = await fetch(`${API_BASE}/api/documents/download/${documentId}`, {
             headers: { "Authorization": `Bearer ${state.token}` }
         });
-        if (!res.ok) throw new Error("Could not access private file server.");
-
+        if (!res.ok) {
+            let errorMsg = "Could not access private file server.";
+            try {
+                const errData = await res.json();
+                if (errData.detail) errorMsg = errData.detail;
+            } catch (e) {
+                // If it's not JSON, stick to the default error message
+            }
+            throw new Error(errorMsg);
+        }
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");

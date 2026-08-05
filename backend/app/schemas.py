@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List, Any
 from datetime import datetime, date
 
@@ -27,6 +27,23 @@ class User(UserBase):
     is_admin: bool = False
     profile_image: Optional[str] = None
     created_at: datetime
+
+    @field_validator("profile_image", mode="before")
+    @classmethod
+    def generate_s3_url(cls, v):
+        if isinstance(v, str) and v.startswith("s3://"):
+            s3_key = v[5:] # remove s3://
+            from backend.app.services.storage import storage_service
+            if hasattr(storage_service, 'use_s3') and storage_service.use_s3:
+                try:
+                    return storage_service.s3_client.generate_presigned_url(
+                        'get_object',
+                        Params={'Bucket': storage_service.bucket_name, 'Key': s3_key},
+                        ExpiresIn=604800
+                    )
+                except Exception:
+                    return v
+        return v
 
     class Config:
         from_attributes = True

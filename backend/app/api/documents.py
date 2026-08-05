@@ -282,7 +282,10 @@ def download_document(
         try:
             # Download file bytes securely using private server credentials
             response = storage_service.s3_client.get_object(Bucket=storage_service.bucket_name, Key=doc.file_path)
-            file_bytes = response['Body'].read()
+            
+            def iterfile():
+                for chunk in response['Body'].iter_chunks(chunk_size=8192):
+                    yield chunk
             
             # Determine content-type
             media_type = "application/octet-stream"
@@ -293,10 +296,11 @@ def download_document(
             elif doc.file_type == "txt":
                 media_type = "text/plain"
 
+            # Quote the filename to prevent header parsing errors with spaces
             return StreamingResponse(
-                io.BytesIO(file_bytes),
+                iterfile(),
                 media_type=media_type,
-                headers={"Content-Disposition": f"attachment; filename={doc.name}"}
+                headers={"Content-Disposition": f'attachment; filename="{doc.name}"'}
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to fetch file from private cloud storage: {str(e)}")

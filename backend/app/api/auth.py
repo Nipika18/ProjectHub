@@ -729,6 +729,15 @@ async def upload_avatar(
                     )
                 except Exception:
                     pass
+            elif current_user.profile_image and current_user.profile_image.startswith("s3://"):
+                try:
+                    old_s3_key = current_user.profile_image[5:]
+                    storage_service.s3_client.delete_object(
+                        Bucket=storage_service.bucket_name,
+                        Key=old_s3_key
+                    )
+                except Exception:
+                    pass
             
             # Upload the new avatar to the S3 bucket under 'avatars/' prefix
             storage_service.s3_client.put_object(
@@ -738,9 +747,11 @@ async def upload_avatar(
                 ContentType=file.content_type
             )
             
-            # Generate a pre-signed URL (valid for 7 days) so the frontend can display it
-            # even though the bucket is private!
-            relative_url = storage_service.s3_client.generate_presigned_url(
+            # Save the raw S3 path in DB so we can generate fresh URLs later!
+            relative_url = f"s3://{s3_path}"
+            
+            # Generate a pre-signed URL (valid for 7 days) for the immediate response
+            display_url = storage_service.s3_client.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': storage_service.bucket_name, 'Key': s3_path},
                 ExpiresIn=604800
@@ -768,6 +779,7 @@ async def upload_avatar(
 
         # Relative URL served as static
         relative_url = f"/uploads/avatars/{filename}"
+        display_url = relative_url
 
     # Persist to DB
     current_user.profile_image = relative_url
@@ -775,4 +787,4 @@ async def upload_avatar(
     db.commit()
     db.refresh(current_user)
 
-    return {"profile_image_url": relative_url}
+    return {"profile_image_url": display_url}
