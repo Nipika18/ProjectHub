@@ -154,7 +154,6 @@ function bindMilestoneEvents() {
 }
 
 window.openEditMilestoneModal = function (id, title, desc, dueDate, status, projectId) {
-    if (!checkAdminAccess("edit milestones")) return;
     const modal = document.getElementById("edit-milestone-modal");
     document.getElementById("edit-milestone-id").value = id;
     document.getElementById("edit-milestone-project-id").value = projectId;

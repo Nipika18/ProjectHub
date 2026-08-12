@@ -62,7 +62,6 @@ async function populateParentStorySelect(projectId) {
 }
 
 if (btnOpenStoryModal) btnOpenStoryModal.addEventListener("click", async () => {
-    if (!checkAdminAccess("create user stories")) return;
     const projectId = document.getElementById("story-project-select")?.value;
     if (!projectId) {
         showToast("Please select a project first", "error");
@@ -77,7 +76,6 @@ if (btnCloseStoryModal) btnCloseStoryModal.addEventListener("click", () => story
 if (btnCancelStoryModal) btnCancelStoryModal.addEventListener("click", () => storyModal.classList.remove("active"));
 
 window.openSubtaskModal = async function (projectId, storyId) {
-    if (!checkAdminAccess("create tasks")) return;
     if (!projectId) return;
 
     // Reset form
@@ -97,7 +95,6 @@ window.openSubtaskModal = async function (projectId, storyId) {
 };
 
 window.openCreateStoryModalForMilestone = async function(milestoneId) {
-    if (!checkAdminAccess("create user stories")) return;
     
     // Trigger the main button click to initialize project context & dropdowns
     const btn = document.getElementById("btn-open-create-story-modal");
@@ -115,7 +112,6 @@ window.openCreateStoryModalForMilestone = async function(milestoneId) {
 
 if (storyForm) storyForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!checkAdminAccess("create user stories")) return;
     const submitBtn = storyForm.querySelector('button[type="submit"]');
     if (submitBtn && submitBtn.disabled) return;
 
@@ -1343,7 +1339,7 @@ function renderStoryDetail(projectId, story) {
     const acList = (story.acceptance_criteria || []).map((ac, idx) => `
         <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; margin-bottom: 8px;">
             <span style="color: var(--color-primary); font-weight: 700; font-size: 0.85rem; min-width: 20px;">${idx + 1}.</span>
-            <input type="text" class="editable-input" data-idx="${idx}" value="${(ac || '').replace(/"/g, '&quot;')}" style="flex-grow: 1; background: transparent; border: none; color: var(--color-text-main); font-size: 0.95rem; outline: none; font-family: inherit;" ${isAdmin ? '' : 'readonly'}>
+            <input type="text" class="editable-input" data-idx="${idx}" value="${(ac || '').replace(/"/g, '&quot;')}" style="flex-grow: 1; background: transparent; border: none; color: var(--color-text-main); font-size: 0.95rem; outline: none; font-family: inherit;">
             ${isAdmin ? `
             <button type="button" onclick="removeAcceptanceCriterion(${projectId}, ${story.id}, ${idx})" style="cursor: pointer; width: 26px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: #EF4444; flex-shrink: 0; transition: background 0.15s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.background='transparent'" title="Delete Criterion">
                 <i data-lucide="x" style="width: 16px; height: 16px;"></i>
@@ -1378,7 +1374,8 @@ function renderStoryDetail(projectId, story) {
             <!-- Left: Subtask Type Badge + Title -->
             <div class="subtask-item-left" style="display: flex; align-items: center; gap: 10px; flex: 1 1 250px; min-width: 0;">
                 <span style="font-size: 0.75rem; color: var(--color-text-muted); font-weight: 700; flex-shrink: 0;">${taskSeqText}</span>
-                <select onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'task_type', this.value)" style="font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; border: none; outline: none; text-transform: uppercase; cursor: ${isAdmin ? 'pointer' : 'default'}; flex-shrink: 0; font-family: inherit;" ${isAdmin ? '' : 'disabled'}>
+                <select onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'task_type', this.value)" style="font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; border: none; outline: none; text-transform: uppercase; cursor: pointer; flex-shrink: 0; font-family: inherit;" ${isAdmin ? '' : 'disabled'}>
+                    <option value="General" ${t.task_type === 'General' || !t.task_type ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">General</option>
                     <option value="Frontend" ${t.task_type === 'Frontend' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">Frontend</option>
                     <option value="Backend" ${t.task_type === 'Backend' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">Backend</option>
                     <option value="AI" ${t.task_type === 'AI' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">AI</option>
@@ -1464,13 +1461,24 @@ function renderStoryDetail(projectId, story) {
                     </div>
                 </div>
 
-                <!-- Description Section -->
-                <div style="margin-bottom: 28px;">
-                    <h4 style="font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px 0; display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="align-left" style="width: 16px; height: 16px; color: var(--color-primary);"></i> Description
-                    </h4>
-                    <div style="position: relative;">
-                        <textarea id="desc-input-${story.id}" ${isAdmin ? '' : 'readonly'} oninput="document.getElementById('desc-save-btn-${story.id}').style.display = 'flex';" placeholder="Add a description..." style="width: 100%; min-height: 90px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; color: var(--color-text-main); font-size: 0.95rem; line-height: 1.5; resize: vertical; font-family: inherit;">${story.description || ''}</textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;">
+                        <span class="status-badge-pill ${story.status}" style="font-size: 0.8rem;">
+                            <i data-lucide="check-circle-2" style="width: 14px; height: 14px; margin-right: 4px;"></i> ${story.status === 'completed' ? 'Done' : story.status === 'in_progress' ? 'In Progress' : 'To Do'}
+                        </span>
+                        ${story.is_on_hold ? `<span class="status-badge-pill pending" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border-color: rgba(234, 179, 8, 0.2); font-size: 0.8rem;"><i data-lucide="pause-circle" style="width: 14px; height: 14px; margin-right: 4px;"></i> On Hold</span>` : ''}
+                        
+                        <select onchange="updateStoryField(${projectId}, ${story.id}, 'status', this.value)" style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                            <option value="pending" ${story.status === 'pending' ? 'selected' : ''}>To Do</option>
+                            <option value="in_progress" ${story.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="completed" ${story.status === 'completed' ? 'selected' : ''}>Done</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; color: var(--color-text-main);">Description</h4>
+                        <textarea id="desc-input-${story.id}" oninput="document.getElementById('desc-save-btn-${story.id}').style.display = 'flex';" placeholder="Add a description..." style="width: 100%; min-height: 90px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; color: var(--color-text-main); font-size: 0.95rem; line-height: 1.5; resize: vertical; font-family: inherit;">${story.description || ''}</textarea>
                         <div id="desc-save-btn-${story.id}" style="display: none; margin-top: 8px; gap: 8px; justify-content: flex-end;">
                             <button type="button" onclick="updateStoryField(${projectId}, ${story.id}, 'description', document.getElementById('desc-input-${story.id}').value); this.parentElement.style.display='none';" class="btn btn-primary" style="padding: 4px 12px; font-size: 0.85rem; font-weight: 600;">Save</button>
                             <button type="button" onclick="document.getElementById('desc-input-${story.id}').value = \`${(story.description || '').replace(/`/g, '\\`')}\`; this.parentElement.style.display='none';" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.85rem; font-weight: 600;">Cancel</button>
@@ -1557,7 +1565,7 @@ function renderStoryDetail(projectId, story) {
                     <!-- Priority -->
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
                         <span style="font-size: 0.85rem; color: var(--color-text-muted); font-weight: 600;">Priority</span>
-                        <select ${isAdmin ? '' : 'disabled'} onchange="updateStoryField(${projectId}, ${story.id}, 'priority', this.value)" style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                        <select onchange="updateStoryField(${projectId}, ${story.id}, 'priority', this.value)" style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer;">
                             <option value="Low" ${story.priority === 'Low' ? 'selected' : ''}>Low</option>
                             <option value="Medium" ${story.priority === 'Medium' ? 'selected' : ''}>Medium</option>
                             <option value="High" ${story.priority === 'High' ? 'selected' : ''}>High</option>
@@ -1568,7 +1576,7 @@ function renderStoryDetail(projectId, story) {
                     <!-- Epic / Milestone -->
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
                         <span style="font-size: 0.85rem; color: var(--color-text-muted); font-weight: 600;">Milestone</span>
-                        <select id="detail-milestone-select-${story.id}" ${isAdmin ? '' : 'disabled'} onchange="updateStoryField(${projectId}, ${story.id}, 'milestone_id', this.value ? parseInt(this.value) : null)" style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer; max-width: 140px; text-overflow: ellipsis;">
+                        <select id="detail-milestone-select-${story.id}" onchange="updateStoryField(${projectId}, ${story.id}, 'milestone_id', this.value ? parseInt(this.value) : null)" style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer; max-width: 140px; text-overflow: ellipsis;">
                             <option value="">None</option>
                             ${(state.milestones || []).map(function (m) { return '<option value="' + m.id + '"' + (story.milestone_id === m.id ? ' selected' : '') + '>' + m.title + '</option>'; }).join('')}
                         </select>
@@ -1577,7 +1585,7 @@ function renderStoryDetail(projectId, story) {
                     <!-- Story Points -->
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
                         <span style="font-size: 0.85rem; color: var(--color-text-muted); font-weight: 600;">Story Points</span>
-                        <select ${isAdmin ? '' : 'disabled'} onchange="updateStoryField(${projectId}, ${story.id}, 'story_points', parseInt(this.value))" style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                        <select onchange="updateStoryField(${projectId}, ${story.id}, 'story_points', parseInt(this.value))" style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer;">
                             <option value="1" ${story.story_points === 1 ? 'selected' : ''}>1 SP</option>
                             <option value="2" ${story.story_points === 2 ? 'selected' : ''}>2 SP</option>
                             <option value="3" ${story.story_points === 3 ? 'selected' : ''}>3 SP</option>
@@ -1767,7 +1775,6 @@ window.deleteTask = async function (projectId, storyId, taskId) {
 };
 
 window.addAcceptanceCriterion = async function (projectId, storyId) {
-    if (!checkAdminAccess("edit story details")) return;
     const input = document.getElementById(`new-ac-input-${storyId}`);
     if (!input) return;
     const text = input.value.trim();
@@ -1794,7 +1801,6 @@ window.addAcceptanceCriterion = async function (projectId, storyId) {
 };
 
 window.removeAcceptanceCriterion = async function (projectId, storyId, idx) {
-    if (!checkAdminAccess("edit story details")) return;
 
     showConfirmModal(
         "Delete Criterion?",
@@ -1820,7 +1826,6 @@ window.removeAcceptanceCriterion = async function (projectId, storyId, idx) {
 };
 
 window.addStoryTask = async function (projectId, storyId) {
-    if (!checkAdminAccess("create tasks")) return;
     const titleInput = document.getElementById(`new-task-title-${storyId}`);
     const typeSelect = document.getElementById(`new-task-type-${storyId}`);
     if (!titleInput || !typeSelect) return;
@@ -2682,7 +2687,7 @@ window.openInlineTaskCreate = function(storyId, projectId, event) {
             const response = await fetch(`${API_BASE}/api/projects/${projectId}/stories/${storyId}/tasks`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${state.token}` },
-                body: JSON.stringify({ title: title, status: "To Do", task_type: "Development" })
+                body: JSON.stringify({ title: title, status: "To Do", task_type: "General" })
             });
             
             if (response.ok) {

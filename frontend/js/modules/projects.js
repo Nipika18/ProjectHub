@@ -511,11 +511,11 @@ function buildMilestoneCardHtml(milestone, projectId, docs, stories, canManage, 
 
         <div class="timeline-card-footer" style="display: flex; justify-content: flex-end; align-items: center;">
             <div class="timeline-card-actions">
-                ${canManage ? `
                 <button class="btn btn-secondary btn-sm" onclick="openEditMilestoneModal(${milestone.id}, '${safeTitle}', '${escapeHTML(milestone.description || '').replace(/'/g, "\\'").replace(/"/g, "&quot;")}', '${milestone.due_date ? milestone.due_date.split('T')[0] : ''}', '${milestone.status}', ${projectId})" title="Edit Milestone">
                     <i data-lucide="edit-3"></i> Edit
                 </button>
                 ${!isDone ? `<button class="btn btn-secondary btn-sm btn-success-light" onclick="toggleMilestoneStatus(${milestone.id}, 'completed', this)" title="Mark Completed"><i data-lucide="check-circle-2"></i> Complete</button>` : `<button class="btn btn-secondary btn-sm" onclick="toggleMilestoneStatus(${milestone.id}, 'pending', this)" title="Reopen Milestone"><i data-lucide="rotate-ccw"></i> Reopen</button>`}
+                ${canManage ? `
                 <button class="btn-icon-action danger" onclick="deleteMilestoneDirect(${milestone.id}, this)" title="Delete Milestone"><i data-lucide="trash-2"></i></button>
                 ` : ""}
             </div>
@@ -626,7 +626,6 @@ async function loadProjectDetailMilestones(projectId) {
 
 // Global scope bindings for inline calls
 window.toggleMilestoneStatus = async function (milestoneId, newStatus, triggerBtn) {
-    if (!checkAdminAccess("update milestone status")) return;
 
     // --- Optimistic UI: update the card instantly without waiting for re-fetch ---
     const card = triggerBtn ? triggerBtn.closest(".timeline-card") : null;

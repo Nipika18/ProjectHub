@@ -6,7 +6,7 @@ from typing import List, Optional
 from openai import OpenAI
 
 from backend.app.core.database import get_db
-from backend.app.core.security import get_current_user, get_current_admin_user, check_is_project_manager_or_admin
+from backend.app.core.security import get_current_user, get_current_admin_user, check_is_project_manager_or_admin, check_is_project_member_or_admin
 from backend.app.core.config import settings
 from backend.app.models import User, Project, Document, DocumentChunk, UserStory, Task, ProjectMember, Notification
 from backend.app import schemas
@@ -317,7 +317,7 @@ def create_story(
     """
     Manually creates a new user story.
     """
-    check_is_project_manager_or_admin(db, current_user, project_id)
+    check_is_project_member_or_admin(db, current_user, project_id)
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -351,7 +351,7 @@ def create_task(
     """
     Manually creates a new task under a user story.
     """
-    check_is_project_manager_or_admin(db, current_user, project_id)
+    check_is_project_member_or_admin(db, current_user, project_id)
     story = db.query(UserStory).filter(UserStory.id == story_id, UserStory.project_id == project_id).first()
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
@@ -447,25 +447,8 @@ def update_story(
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
         
-    # Check project membership or ownership
-    project = db.query(Project).filter(Project.id == project_id).first()
-    is_owner = project and project.owner_id == current_user.id
-    is_member = db.query(ProjectMember).filter(ProjectMember.project_id == project_id, ProjectMember.user_id == current_user.id).first() is not None
-    is_manager = is_owner or db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id,
-        ProjectMember.role == "Manager"
-    ).first() is not None
-
-    if not current_user.is_admin and not is_manager:
-        if not is_member:
-            raise HTTPException(status_code=403, detail="Only team members of this project can update story status.")
-        if ("title" in request.model_fields_set or 
-            "acceptance_criteria" in request.model_fields_set or 
-            "description" in request.model_fields_set or 
-            "priority" in request.model_fields_set or 
-            "story_points" in request.model_fields_set):
-            raise HTTPException(status_code=403, detail="Only administrators or project managers can edit user story details.")
+    # Check project membership
+    check_is_project_member_or_admin(db, current_user, project_id)
 
     if "title" in request.model_fields_set:
         story.title = request.title
@@ -515,20 +498,8 @@ def update_task(
         
     old_assignee = task.assigned_to
         
-    project = db.query(Project).filter(Project.id == project_id).first()
-    is_owner = project and project.owner_id == current_user.id
-    is_member = db.query(ProjectMember).filter(ProjectMember.project_id == project_id, ProjectMember.user_id == current_user.id).first() is not None
-    is_manager = is_owner or db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id,
-        ProjectMember.role == "Manager"
-    ).first() is not None
-
-    if not current_user.is_admin and not is_manager:
-        if not is_member:
-            raise HTTPException(status_code=403, detail="Only team members of this project can update task statuses.")
-        if "title" in request.model_fields_set or "task_type" in request.model_fields_set or "assigned_to" in request.model_fields_set or "due_date" in request.model_fields_set:
-            raise HTTPException(status_code=403, detail="Only administrators or project managers can edit task details (title, type, assignee, or due date).")
+    # Check project membership
+    check_is_project_member_or_admin(db, current_user, project_id)
 
     if "title" in request.model_fields_set:
         task.title = request.title

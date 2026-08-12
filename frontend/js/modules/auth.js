@@ -446,6 +446,17 @@ function applyRBACUI() {
         deleteProjectBtn.style.display = hasManagerPrivileges ? "inline-flex" : "none";
     }
 
+    // Hide Upload Document and New Milestone buttons on the Milestones Roadmap for non-managers
+    const uploadDocBtn = document.getElementById("btn-global-upload-doc");
+    if (uploadDocBtn) {
+        uploadDocBtn.style.display = hasManagerPrivileges ? "inline-flex" : "none";
+    }
+
+    const newMilestoneBtn = document.getElementById("btn-open-create-milestone-modal");
+    if (newMilestoneBtn) {
+        newMilestoneBtn.style.display = hasManagerPrivileges ? "inline-flex" : "none";
+    }
+
     // "New Project" button is visible to all logged-in users
     const newProjectBtn = document.getElementById("btn-open-create-project-modal");
     if (newProjectBtn) {

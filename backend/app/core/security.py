@@ -111,6 +111,33 @@ def get_current_admin_user(current_user = Depends(get_current_user), db: Session
         )
     return current_user
 
+def check_is_project_member_or_admin(db: Session, user, project_id: int):
+    """
+    Helper to check if user is a Super-Admin OR any Project Member/Owner.
+    Raises HTTPException 403 if they do not have access.
+    """
+    if getattr(user, "is_admin", False):
+        return True
+        
+    from backend.app.models import Project, ProjectMember
+    # Check if project owner
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if project and project.owner_id == user.id:
+        return True
+        
+    # Check if member (any role)
+    member = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == user.id
+    ).first()
+    
+    if not (project or member):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must be a member of this project to perform this action."
+        )
+    return True
+
 def check_is_project_manager_or_admin(db: Session, user, project_id: int):
     """
     Helper to check if user is a Super-Admin OR a Project Manager/Owner.

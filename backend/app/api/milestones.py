@@ -94,7 +94,8 @@ def update_milestone(
     if not milestone:
         raise HTTPException(status_code=404, detail="Milestone not found")
 
-    check_is_project_manager_or_admin(db, current_user, milestone.project_id)
+    from backend.app.core.security import check_is_project_member_or_admin
+    check_is_project_member_or_admin(db, current_user, milestone.project_id)
 
     old_status = milestone.status
     if milestone_in.title is not None:
