@@ -111,7 +111,7 @@ def chat_with_project(
                 search_query = request.message
 
         try:
-            chunks = rag_service.query_project_chunks(db, request.project_id, search_query, milestone_id=request.milestone_id, category=request.category, top_k=5)
+            chunks = rag_service.query_project_chunks(db, request.project_id, search_query, milestone_id=request.milestone_id, document_id=request.document_id, category=request.category, top_k=5)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to query vector database: {str(e)}")
 

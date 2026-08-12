@@ -125,6 +125,8 @@ class MilestoneBase(BaseModel):
     description: Optional[str] = None
     due_date: Optional[datetime] = None
     status: Optional[str] = "pending"
+    priority: str = "Medium"
+    assignee_id: Optional[int] = None
 
 class MilestoneCreate(MilestoneBase):
     project_id: int
@@ -134,10 +136,16 @@ class MilestoneUpdate(BaseModel):
     description: Optional[str] = None
     due_date: Optional[datetime] = None
     status: Optional[str] = None
+    priority: Optional[str] = None
+    assignee_id: Optional[int] = None
+    reporter_id: Optional[int] = None
 
 class Milestone(MilestoneBase):
     id: int
     project_id: int
+    reporter_id: Optional[int] = None
+    assignee_name: Optional[str] = None
+    reporter_name: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -191,6 +199,7 @@ class ChatRequest(BaseModel):
     project_id: int
     message: str
     milestone_id: Optional[int] = None
+    document_id: Optional[int] = None
     category: Optional[str] = None
     history: Optional[List[ChatHistoryItem]] = None
 
@@ -239,6 +248,7 @@ class UserStoryBase(BaseModel):
     is_on_hold: bool = False
     comments: Optional[List[dict]] = None
     due_date: Optional[date] = None
+    milestone_id: Optional[int] = None
 
 class UserStoryUpdate(BaseModel):
     title: Optional[str] = None
@@ -250,12 +260,14 @@ class UserStoryUpdate(BaseModel):
     is_on_hold: Optional[bool] = None
     comments: Optional[List[dict]] = None
     due_date: Optional[date] = None
+    milestone_id: Optional[int] = None
 
 class UserStory(UserStoryBase):
     id: int
     project_id: int
     created_at: datetime
     due_date: Optional[date] = None
+    milestone_id: Optional[int] = None
     tasks: List[Task] = []
 
     class Config:
@@ -263,6 +275,7 @@ class UserStory(UserStoryBase):
 
 class GenerateStoriesRequest(BaseModel):
     document_ids: Optional[List[int]] = None
+    milestone_id: Optional[int] = None
 
 class GenerateStoriesFromDocumentRequest(BaseModel):
     document_id: int
@@ -284,6 +297,7 @@ class MyTask(BaseModel):
     created_at: datetime
     story_seq: Optional[int] = None
     task_seq: Optional[int] = None
+    milestone_title: Optional[str] = None
 
     class Config:
         from_attributes = True

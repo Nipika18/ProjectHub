@@ -24,3 +24,8 @@ It integrates two core capabilities:
 - **AI User Story Generator**: Generates User Stories and nested Subtasks from uploaded specification files.
 - **Optimistic Drag-and-Drop**: Updates the UI instantly while saving updates asynchronously in the background.
 - **Default Assignees**: Automatically assigns user stories and tasks based on project member roles.
+
+### 4. Enterprise Architecture & Performance
+- **Hybrid Storage Engine**: Seamlessly switches between AWS S3 Cloud Storage (via `boto3`) and local disk storage based on environment variables. Includes automated S3 folder purging on project deletion and secure Pre-signed URLs for private avatars.
+- **Optimized Data Fetching**: Prevents N+1 database queries when fetching user permissions and prevents redundant API calls in the frontend to ensure sub-second UI rendering for large data sets.
+- **Real-Time UI Synchronization**: Globally synced project selectors and reactive DOM updates to guarantee consistency between navigation elements and detailed data views.

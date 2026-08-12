@@ -33,6 +33,10 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[Sprint AI] Orphan purge skipped (non-fatal): {e}")
     
+    import asyncio
+    from backend.app.core.worker import start_document_worker
+    asyncio.create_task(start_document_worker())
+    
     yield
 
 
@@ -141,6 +145,9 @@ app.include_router(stories.router)
 app.include_router(team.router)
 app.include_router(team.my_tasks_router)
 app.include_router(notifications.router)
+
+from backend.app.api import ws
+app.include_router(ws.router)
 
 from sqlalchemy import text
 from fastapi import Depends

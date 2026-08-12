@@ -319,8 +319,8 @@ def remove_team_member(
 # =====================================================================
 my_tasks_router = APIRouter(prefix="/api/my-tasks", tags=["my-tasks"])
 
-
 from sqlalchemy import func
+from backend.app.models import UserStory, Task, Project, Milestone
 
 @my_tasks_router.get("", response_model=List[schemas.MyTask])
 def get_my_tasks(
@@ -341,10 +341,12 @@ def get_my_tasks(
         func.row_number().over(partition_by=Task.story_id, order_by=Task.id).label('seq')
     ).subquery()
 
-    results = db.query(Task, UserStory, Project, story_seq_sq.c.seq, task_seq_sq.c.seq).join(
+    results = db.query(Task, UserStory, Project, Milestone, story_seq_sq.c.seq, task_seq_sq.c.seq).join(
         UserStory, Task.story_id == UserStory.id
     ).join(
         Project, UserStory.project_id == Project.id
+    ).outerjoin(
+        Milestone, UserStory.milestone_id == Milestone.id
     ).join(
         story_seq_sq, UserStory.id == story_seq_sq.c.id
     ).join(
@@ -356,7 +358,7 @@ def get_my_tasks(
     ).all()
 
     result = []
-    for task, story, project, s_seq, t_seq in results:
+    for task, story, project, milestone, s_seq, t_seq in results:
         result.append(schemas.MyTask(
             id=task.id,
             title=task.title,
@@ -369,7 +371,8 @@ def get_my_tasks(
             project_name=project.name,
             created_at=task.created_at,
             story_seq=s_seq,
-            task_seq=t_seq
+            task_seq=t_seq,
+            milestone_title=milestone.title if milestone else None
         ))
 
     return result

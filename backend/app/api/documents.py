@@ -89,80 +89,66 @@ async def upload_document(
         )
 
     # Step 1: Save physical file to disk (Generates unique hash-based prefix)
+    file_path = None
+    upload_success = False
     try:
-        file_path = storage_service.save_file(file, project_id=project_id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file on disk: {str(e)}")
+        try:
+            file_path = storage_service.save_file(file, project_id=project_id)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Storage error: {str(e)}")
 
-    # Get file size
-    file.file.seek(0, os.SEEK_END)
-    file_size = file.file.tell()
-    file.file.seek(0) # Reset pointer
+        import asyncio
+        await asyncio.sleep(0.05)
+        if await request.is_disconnected():
+            raise HTTPException(status_code=499, detail="Upload cancelled by client")
 
-    if await request.is_disconnected():
-        storage_service.delete_file(file_path)
-        raise HTTPException(status_code=499, detail="Upload cancelled by client")
+        # Get file size
+        file.file.seek(0, os.SEEK_END)
+        file_size = file.file.tell()
+        file.file.seek(0) # Reset pointer
 
-    # Step 2: Create document record using flush() (NOT commit) so we get the ID
-    #         but keep the transaction open. If anything fails later, rollback
-    #         automatically removes the record — zero orphan documents.
-    new_doc = Document(
-        name=file.filename,
-        file_path=file_path,
-        file_type=file_type,
-        file_size=file_size,
-        category=category,
-        project_id=project_id,
-        milestone_id=milestone_id,
-        uploaded_by=current_user.id
-    )
-    db.add(new_doc)
-    db.flush()      # Assigns new_doc.id without committing the transaction
-    db.refresh(new_doc)
+        if await request.is_disconnected():
+            raise HTTPException(status_code=499, detail="Upload cancelled by client")
 
-    # Step 3 & 4: Chunk text and embed using pgvector
-    try:
-        ingestion_success = rag_service.ingest_document(db, new_doc.id)
-        if not ingestion_success or await request.is_disconnected():
-            db.rollback()
-            storage_service.delete_file(file_path)
-            raise HTTPException(status_code=400, detail="Document upload cancelled or could not be parsed.")
-    except HTTPException:
-        raise
-    except Exception as e:
-        # Rollback the entire transaction (document + any partial chunks)
-        db.rollback()
-        storage_service.delete_file(file_path)
-        raise HTTPException(status_code=500, detail=f"RAG ingestion failure: {str(e)}")
+        # Step 2: Create document record using flush() (NOT commit) so we get the ID
+        #         but keep the transaction open. If anything fails later, rollback
+        #         automatically removes the record — zero orphan documents.
+        new_doc = Document(
+            name=file.filename,
+            file_path=file_path,
+            file_type=file_type,
+            file_size=file_size,
+            category=category,
+            project_id=project_id,
+            milestone_id=milestone_id,
+            uploaded_by=current_user.id
+        )
+        db.add(new_doc)
+        db.flush()      # Assigns new_doc.id without committing the transaction
+        db.refresh(new_doc)
 
-    if await request.is_disconnected():
-        db.rollback()
-        storage_service.delete_file(file_path)
-        raise HTTPException(status_code=499, detail="Upload cancelled by client")
+        db.commit()
+        # Step 6: Log Activity
+        log_activity(
+            db,
+            current_user.id,
+            "upload_document",
+            f"Uploaded and indexed document: '{new_doc.name}' (Size: {new_doc.file_size} bytes) under project '{project.name}'"
+        )
 
-    # Step 5: Everything succeeded — commit the document AND its chunks in one transaction
-    db.commit()
-
-    # Step 5b: Post-commit cancel catch — for small/fast files the server commits
-    #          before the browser's abort signal arrives. Detect that here and reverse.
-    if await request.is_disconnected():
-        committed_doc = db.query(Document).filter(Document.id == new_doc.id).first()
-        if committed_doc:
-            storage_service.delete_file(committed_doc.file_path)
-            db.delete(committed_doc)  # CASCADE removes chunks + linked stories
-            db.commit()
-        print(f"[Sprint AI] Reversed committed upload for '{new_doc.name}' — client cancelled after server finished.")
-        raise HTTPException(status_code=499, detail="Upload cancelled by client after processing; cleaned up.")
-
-    # Step 6: Log Activity
-    log_activity(
-        db,
-        current_user.id,
-        "upload_document",
-        f"Uploaded and indexed document: '{new_doc.name}' (Size: {new_doc.file_size} bytes) under project '{project.name}'"
-    )
-
-    return new_doc
+        upload_success = True
+        return new_doc
+    finally:
+        if not upload_success:
+            if file_path:
+                try:
+                    storage_service.delete_file(file_path)
+                except Exception:
+                    pass
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
 @router.get("/project/{project_id}", response_model=List[schemas.Document])
 def list_project_documents(

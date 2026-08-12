@@ -19,9 +19,9 @@ class FileStorageService:
             from botocore.config import Config
             self.bucket_name = settings.AWS_S3_BUCKET_NAME
             
-            # We explicitly define the endpoint_url here. If we don't, boto3 uses the global 
-            # s3.amazonaws.com endpoint. For buckets outside us-east-1 (like eu-north-1), 
-            # AWS issues a redirect which breaks the cryptographic signature of the presigned URL!
+            # We explicitly define the regional endpoint to prevent AWS global router redirects 
+            # (which invalidate the presigned URL signature). We also explicitly force 
+            # 'virtual' addressing_style, which is required for all modern AWS buckets!
             regional_endpoint = f"https://s3.{settings.AWS_REGION}.amazonaws.com"
             
             # Configure boto3 client
@@ -31,7 +31,7 @@ class FileStorageService:
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
                 region_name=settings.AWS_REGION,
                 endpoint_url=regional_endpoint,
-                config=Config(signature_version='s3v4')
+                config=Config(signature_version='s3v4', s3={'addressing_style': 'virtual'})
             )
             self.bucket_name = settings.AWS_S3_BUCKET_NAME
         else:

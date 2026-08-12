@@ -66,12 +66,18 @@ class Milestone(Base):
     description = Column(Text, nullable=True)
     due_date = Column(DateTime, nullable=True)
     status = Column(String, default="pending")  # pending, completed
+    priority = Column(String, default="Medium")
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    assignee_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reporter_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     project = relationship("Project", back_populates="milestones")
     documents = relationship("Document", back_populates="milestone")
+    user_stories = relationship("UserStory", back_populates="milestone")
+    assignee = relationship("User", foreign_keys=[assignee_id])
+    reporter = relationship("User", foreign_keys=[reporter_id])
 
 
 class Document(Base):
@@ -82,6 +88,7 @@ class Document(Base):
     file_path = Column(String, nullable=False)  # local storage disk path
     file_type = Column(String, nullable=False)  # pdf, docx, html, xlsx, txt
     file_size = Column(Integer, nullable=False)  # size in bytes
+    status = Column(String, default="processing", nullable=False) # processing, ready, failed
     category = Column(String, default="team", nullable=True) # team or client
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     milestone_id = Column(Integer, ForeignKey("milestones.id", ondelete="SET NULL"), nullable=True)
@@ -136,6 +143,7 @@ class UserStory(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=True)
+    milestone_id = Column(Integer, ForeignKey("milestones.id", ondelete="SET NULL"), nullable=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     acceptance_criteria = Column(JSON, nullable=False)  # List of strings
@@ -150,7 +158,8 @@ class UserStory(Base):
     # Relationships
     project = relationship("Project", back_populates="user_stories")
     document = relationship("Document", back_populates="user_stories")
-    tasks = relationship("Task", back_populates="user_story", cascade="all, delete-orphan")
+    milestone = relationship("Milestone", back_populates="user_stories")
+    tasks = relationship("Task", back_populates="user_story", cascade="all, delete-orphan", order_by="Task.id")
 
 
 class Task(Base):

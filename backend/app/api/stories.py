@@ -2,7 +2,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import case
-from typing import List
+from typing import List, Optional
 from openai import OpenAI
 
 from backend.app.core.database import get_db
@@ -100,12 +100,16 @@ def generate_stories_from_documents(
     # Get document chunks for context
     query = db.query(DocumentChunk).join(Document, DocumentChunk.document_id == Document.id).filter(Document.project_id == project_id)
     
-    if request.document_ids:
+    if request.milestone_id:
+        query = query.filter(Document.milestone_id == request.milestone_id)
+    elif request.document_ids:
         query = query.filter(Document.id.in_(request.document_ids))
         
     chunks = query.order_by(DocumentChunk.document_id, DocumentChunk.chunk_index).limit(50).all()
     
     if not chunks:
+        if request.milestone_id:
+            raise HTTPException(status_code=400, detail="No documents found in this milestone. Please attach a document first to generate stories.")
         raise HTTPException(status_code=400, detail="No document content found to analyze.")
         
     existing_db_stories = db.query(UserStory).filter(UserStory.project_id == project_id).all()
@@ -152,7 +156,8 @@ def generate_stories_from_documents(
                 acceptance_criteria=s_data.get("acceptance_criteria", []),
                 priority=s_data.get("priority", "Medium"),
                 story_points=sp,
-                status="To Do"
+                status="To Do",
+                milestone_id=request.milestone_id
             )
             db.add(new_story)
             db.flush()
@@ -262,7 +267,8 @@ def generate_stories_from_single_document(
                 acceptance_criteria=s_data.get("acceptance_criteria", []),
                 priority=s_data.get("priority", "Medium"),
                 story_points=sp,
-                status="To Do"
+                status="To Do",
+                milestone_id=doc.milestone_id
             )
             db.add(new_story)
             db.flush()
@@ -324,7 +330,9 @@ def create_story(
         priority=request.priority,
         story_points=request.story_points,
         status=request.status,
-        comments=request.comments
+        comments=request.comments,
+        due_date=request.due_date,
+        milestone_id=request.milestone_id
     )
     db.add(new_story)
     db.commit()
@@ -383,6 +391,7 @@ def create_task(
 @router.get("", response_model=List[schemas.UserStory])
 def get_project_stories(
     project_id: int,
+    milestone_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -397,11 +406,16 @@ def get_project_stories(
         (UserStory.priority == 'Low', 4),
         else_=5
     )
-    stories = db.query(UserStory).options(
+    query = db.query(UserStory).options(
         joinedload(UserStory.tasks)
     ).filter(
         UserStory.project_id == project_id
-    ).order_by(
+    )
+    
+    if milestone_id is not None:
+        query = query.filter(UserStory.milestone_id == milestone_id)
+        
+    stories = query.order_by(
         priority_order, UserStory.id.desc()
     ).all()
 
@@ -471,6 +485,8 @@ def update_story(
         story.comments = request.comments
     if "due_date" in request.model_fields_set:
         story.due_date = request.due_date
+    if hasattr(request, 'milestone_id') and request.milestone_id is not None:
+        story.milestone_id = request.milestone_id
         
     db.commit()
     db.refresh(story)

@@ -384,7 +384,7 @@ def login(login_in: schemas.UserLogin, request: Request, db: Session = Depends(g
     if not user:
         record_failed_login(login_in.email)
         ip = get_client_ip(request)
-        log_activity(db, None, "failed_login", f"Login attempt for non-existent account {login_in.email} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
+        log_activity(db, None, "failed_login", f"Login attempt for non-existent account {login_in.email} [IP: {ip}]")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Account not found. Please sign up first.",
@@ -394,7 +394,7 @@ def login(login_in: schemas.UserLogin, request: Request, db: Session = Depends(g
     if not verify_password(login_in.password, user.hashed_password):
         record_failed_login(login_in.email)
         ip = get_client_ip(request)
-        log_activity(db, None, "failed_login", f"Incorrect password for {login_in.email} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
+        log_activity(db, None, "failed_login", f"Incorrect password for {login_in.email} [IP: {ip}]")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password",
@@ -412,7 +412,7 @@ def login(login_in: schemas.UserLogin, request: Request, db: Session = Depends(g
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
     ip = get_client_ip(request)
-    log_activity(db, user.id, "login_user", f"User logged in: {user.full_name} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
+    log_activity(db, user.id, "login_user", f"User logged in: {user.full_name} [IP: {ip}]")
     
     return {
         "access_token": access_token,
@@ -450,7 +450,7 @@ def login_form(request: Request, form_data: OAuth2PasswordRequestForm = Depends(
         if not user or not verify_password(form_data.password, user.hashed_password):
             record_failed_login(form_data.username)
             ip = get_client_ip(request)
-            log_activity(db, None, "failed_login", f"Failed login attempt for {form_data.username} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
+            log_activity(db, None, "failed_login", f"Failed login attempt for {form_data.username} [IP: {ip}]")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
@@ -480,7 +480,7 @@ def login_form(request: Request, form_data: OAuth2PasswordRequestForm = Depends(
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
     ip = get_client_ip(request)
-    log_activity(db, user.id, "login_user", f"User logged in (form): {user.full_name} [IP: {ip}] [Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}]")
+    log_activity(db, user.id, "login_user", f"User logged in (form): {user.full_name} [IP: {ip}]")
     
     return {
         "access_token": access_token,

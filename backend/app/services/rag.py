@@ -200,6 +200,27 @@ class RAGService:
 
         return chunks
 
+    @traceable(name="RAG Embedding Generator Batch", run_type="embedding")
+    def embed_texts_batch(self, texts: List[str]) -> List[List[float]]:
+        """
+        Generates dense vector embeddings for a list of texts in a single OpenAI API call.
+        """
+        if not texts:
+            return []
+        try:
+            response = client.embeddings.create(
+                input=texts,
+                model="text-embedding-3-small"
+            )
+            return [item.embedding for item in response.data]
+        except Exception as e:
+            print(f"Error in batch embedding: {str(e)}")
+            # Fallback to individual embeddings if batch fails
+            embeddings = []
+            for t in texts:
+                embeddings.append(self.embed_text(t))
+            return embeddings
+
     @traceable(name="RAG Embedding Generator", run_type="embedding")
     def embed_text(self, text: str) -> List[float]:
         """
@@ -210,14 +231,15 @@ class RAGService:
             model="text-embedding-3-small"
         )
         return response.data[0].embedding
-    def ingest_document(self, db: Session, document_id: int) -> bool:
+
+    async def ingest_document(self, db: Session, document_id: int) -> bool:
         """
         Performs the complete document ingestion pipeline:
         1. Reads document record.
         2. Obtains local file path (downloads from Supabase to a temporary local file if in Cloud Mode).
         3. Parses the file page/segment-wise.
         4. Chunks segments using Token-Based Sentence-Aware chunker.
-        5. Generates local vector embedding for each chunk.
+        5. Generates vector embeddings in a single batch OpenAI call.
         6. Stores chunks and vector embeddings in the database.
         7. Clean up the temporary local file on completion.
         """
@@ -240,27 +262,39 @@ class RAGService:
                 return False
 
             chunk_index = 0
-            db_chunks = []
+            chunk_data_list = []
 
             for text_content, segment_meta in segments:
                 # Chunk the segment text into token-safe full sentences
                 text_chunks = self.sentence_aware_chunking(text_content)
                 
                 for chunk_content in text_chunks:
-                    # Embed chunk content
-                    vector = self.embed_text(chunk_content)
-
-                    # Prepare SQLAlchemy chunk record
-                    db_chunk = DocumentChunk(
-                        document_id=doc.id,
-                        content=chunk_content,
-                        chunk_index=chunk_index,
-                        document_name=doc.name,
-                        embedding=vector,
-                        metadata_json=segment_meta
-                    )
-                    db_chunks.append(db_chunk)
+                    chunk_data_list.append({
+                        "content": chunk_content,
+                        "chunk_index": chunk_index,
+                        "metadata_json": segment_meta
+                    })
                     chunk_index += 1
+
+            if not chunk_data_list:
+                return False
+
+            # Extract all chunk texts for a single batch OpenAI API call (saves network calls and time)
+            all_texts = [c["content"] for c in chunk_data_list]
+            all_embeddings = self.embed_texts_batch(all_texts)
+
+            db_chunks = []
+            for i, c_data in enumerate(chunk_data_list):
+                vector = all_embeddings[i] if i < len(all_embeddings) else self.embed_text(c_data["content"])
+                db_chunk = DocumentChunk(
+                    document_id=doc.id,
+                    content=c_data["content"],
+                    chunk_index=c_data["chunk_index"],
+                    document_name=doc.name,
+                    embedding=vector,
+                    metadata_json=c_data["metadata_json"]
+                )
+                db_chunks.append(db_chunk)
 
             if db_chunks:
                 db.add_all(db_chunks)
@@ -308,9 +342,9 @@ class RAGService:
             return {"is_summary": False, "category": "all"}
 
     @traceable(name="RAG Hybrid Retriever", run_type="retriever", process_inputs=_clean_retriever_inputs)
-    def query_project_chunks(self, db: Session, project_id: int, query_text: str, milestone_id: int = None, category: str = None, top_k: int = 5) -> List[Dict[str, Any]]:
+    def query_project_chunks(self, db: Session, project_id: int, query_text: str, milestone_id: int = None, document_id: int = None, category: str = None, top_k: int = 5) -> List[Dict[str, Any]]:
         """
-        Performs pgvector Cosine Distance similarity search scoped by project_id and optionally milestone_id.
+        Performs pgvector Cosine Distance similarity search scoped by project_id and optionally milestone_id/document_id.
         Detects summary/overview queries using LLM intent classification, switching to sequential chunk retrieval.
         Filters out matches below a Cosine Similarity score of 0.15 for standard similarity search.
         """
@@ -333,6 +367,9 @@ class RAGService:
 
             if milestone_id is not None:
                 query = query.filter(Document.milestone_id == milestone_id)
+
+            if document_id is not None:
+                query = query.filter(Document.id == document_id)
 
             if current_category is not None and current_category.strip() != "":
                 query = query.filter(or_(Document.category == current_category, Document.category == 'global'))
@@ -383,6 +420,8 @@ class RAGService:
 
         if milestone_id is not None:
             semantic_query = semantic_query.filter(Document.milestone_id == milestone_id)
+        if document_id is not None:
+            semantic_query = semantic_query.filter(Document.id == document_id)
         if category is not None and category.strip() != "":
             semantic_query = semantic_query.filter(or_(Document.category == category, Document.category == 'global'))
 
@@ -398,6 +437,8 @@ class RAGService:
 
         if milestone_id is not None:
             keyword_query = keyword_query.filter(Document.milestone_id == milestone_id)
+        if document_id is not None:
+            keyword_query = keyword_query.filter(Document.id == document_id)
         if category is not None and category.strip() != "":
             keyword_query = keyword_query.filter(or_(Document.category == category, Document.category == 'global'))
 

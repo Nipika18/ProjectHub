@@ -27,6 +27,7 @@ def get_global_stories_prompt(context_text: str, existing_titles_prompt: str, av
     The following user stories ALREADY EXIST in this project:
     {existing_titles_prompt}
     You MUST NOT generate any stories that duplicate or repeat features already covered in the list above. Only generate strictly NEW, complementary requirements!
+    If a new user story depends on or relates to one of the existing stories listed above, explicitly mention the existing story title in the description (e.g. "Builds upon [Existing Story Title]").
     
     DOCUMENT CONTEXT:
     {context_text}
@@ -77,6 +78,7 @@ def get_single_document_stories_prompt(doc_name: str, context_text: str, existin
     The following user stories ALREADY EXIST in this project:
     {existing_titles_prompt}
     You MUST NOT generate any stories that duplicate or repeat features already covered in the list above. Only generate strictly NEW, complementary requirements!
+    If a new user story depends on or relates to one of the existing stories listed above, explicitly mention the existing story title in the description (e.g. "Builds upon [Existing Story Title]").
     
     DOCUMENT: {doc_name}
     CONTENT:
