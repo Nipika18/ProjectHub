@@ -2988,7 +2988,7 @@ window.jiraListUpdateSelection = function () {
         countEl.textContent = checked.length;
         
         // Hide delete for non-admins
-        const isGlobalAdmin = state.user?.is_global_admin;
+        const isGlobalAdmin = state.user?.is_admin;
         const isProjManager = ['Owner', 'Manager'].includes(state.currentProjectRole);
         const isAdmin = isGlobalAdmin || isProjManager;
         const deleteBtn = document.getElementById('bulk-delete-btn');
