@@ -423,11 +423,8 @@ function applyRBACUI() {
         if (href === "#dashboard") {
             // Dashboard is always visible for everyone
             item.style.display = "flex";
-        } else if (id === "nav-milestones") {
-            // Milestones roadmap is admin/manager management view
-            item.style.display = showManagementViews ? "flex" : "none";
         } else {
-            // For non-admins: show other sections (including Projects) only after a project is selected
+            // For non-admins: show other sections (including Milestones and Projects) only after a project is selected
             item.style.display = (isAdmin || hasProjectSelected) ? "flex" : "none";
         }
     });

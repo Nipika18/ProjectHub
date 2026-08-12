@@ -47,10 +47,13 @@ async function loadDashboardStats() {
         let totalMilestones = 0;
 
         const projectsCard = document.getElementById("stat-card-projects");
-        if (selectedProjId) {
-            // Scoped: show stats only for the selected project, hide Total Projects card
-            if (projectsCard) projectsCard.style.display = "none";
+        // Always show Total Projects card
+        if (projectsCard) projectsCard.style.display = "flex";
+        const statProjEl = document.getElementById("dash-stat-projects-count") || document.getElementById("stat-projects");
+        if (statProjEl) statProjEl.textContent = projs.length;
 
+        if (selectedProjId) {
+            // Scoped: fetch stats only for the selected project
             const [mRes, docsRes] = await Promise.all([
                 fetch(`${API_BASE}/api/milestones/project/${selectedProjId}`, { headers: { "Authorization": `Bearer ${state.token}` } }),
                 fetch(`${API_BASE}/api/documents/project/${selectedProjId}`, { headers: { "Authorization": `Bearer ${state.token}` } })
@@ -58,11 +61,7 @@ async function loadDashboardStats() {
             if (mRes.ok) totalMilestones = (await mRes.json()).length;
             if (docsRes.ok) totalDocs = (await docsRes.json()).length;
         } else {
-            // No project selected: show Total Projects card and aggregate stats
-            if (projectsCard) projectsCard.style.display = "flex";
-            const statProjEl = document.getElementById("dash-stat-projects-count") || document.getElementById("stat-projects");
-            if (statProjEl) statProjEl.textContent = projs.length;
-
+            // No project selected: aggregate stats
             if (state.milestones && state.milestones.length > 0) {
                 totalMilestones = state.milestones.length;
             } else if (projs.length > 0) {
