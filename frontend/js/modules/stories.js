@@ -3172,8 +3172,7 @@ window.jiraListBulkDelete = async function () {
             jiraListClearSelection();
 
             // Refresh the stories list
-            const btn = document.getElementById('btn-load-stories');
-            if (btn) btn.click();
+            await loadStories();
         },
         "danger"
     );
