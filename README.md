@@ -23,6 +23,7 @@ It integrates two core capabilities:
 ### 3. Agile Kanban & User Story Board
 - **AI User Story Generator**: Generates User Stories and nested Subtasks from uploaded specification files.
 - **Optimistic Drag-and-Drop**: Updates the UI instantly while saving updates asynchronously in the background.
+- **Role-Based Permissions**: Allows all team members to collaboratively create and update stories/tasks, while strictly reserving destructive actions (like deletion) for Project Managers and Admins.
 - **Default Assignees**: Automatically assigns user stories and tasks based on project member roles.
 
 ### 4. Enterprise Architecture & Performance

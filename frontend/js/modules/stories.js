@@ -1374,7 +1374,7 @@ function renderStoryDetail(projectId, story) {
             <!-- Left: Subtask Type Badge + Title -->
             <div class="subtask-item-left" style="display: flex; align-items: center; gap: 10px; flex: 1 1 250px; min-width: 0;">
                 <span style="font-size: 0.75rem; color: var(--color-text-muted); font-weight: 700; flex-shrink: 0;">${taskSeqText}</span>
-                <select onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'task_type', this.value)" style="font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; border: none; outline: none; text-transform: uppercase; cursor: pointer; flex-shrink: 0; font-family: inherit;" ${isAdmin ? '' : 'disabled'}>
+                <select onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'task_type', this.value)" style="font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; border: none; outline: none; text-transform: uppercase; cursor: pointer; flex-shrink: 0; font-family: inherit;" >
                     <option value="General" ${t.task_type === 'General' || !t.task_type ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">General</option>
                     <option value="Frontend" ${t.task_type === 'Frontend' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">Frontend</option>
                     <option value="Backend" ${t.task_type === 'Backend' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">Backend</option>
@@ -1383,11 +1383,11 @@ function renderStoryDetail(projectId, story) {
                     <option value="Manager" ${t.task_type === 'Manager' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">Manager</option>
                     <option value="DevOps" ${t.task_type === 'DevOps' ? 'selected' : ''} style="background: var(--bg-surface); color: var(--color-text-main);">DevOps</option>
                 </select>
-                <input type="text" value="${(t.title || '').replace(/"/g, '&quot;')}" onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'title', this.value)" style="flex: 1 1 100px; min-width: 0; background: transparent; border: none; font-size: 0.95rem; font-weight: 500; color: var(--color-text-main); outline: none; text-overflow: ellipsis;" ${isAdmin ? '' : 'readonly'}>
+                <input type="text" value="${(t.title || '').replace(/"/g, '&quot;')}" onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'title', this.value)" style="flex: 1 1 100px; min-width: 0; background: transparent; border: none; font-size: 0.95rem; font-weight: 500; color: var(--color-text-main); outline: none; text-overflow: ellipsis;" >
             </div>
             <!-- Right: Assignee, Status, Delete -->
             <div class="subtask-item-right" style="display: flex; align-items: center; gap: 8px; flex: 0 0 auto; flex-wrap: wrap;">
-                <select onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'assigned_to', this.value ? parseInt(this.value) : null)" style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; color: var(--color-text-main); cursor: pointer;" ${isAdmin ? '' : 'disabled'}>
+                <select onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'assigned_to', this.value ? parseInt(this.value) : null)" style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; color: var(--color-text-main); cursor: pointer;" >
                     <option value="">Unassigned</option>
                     ${membersOptions}
                 </select>
@@ -1454,34 +1454,23 @@ function renderStoryDetail(projectId, story) {
             <div style="flex: 1 1 440px; min-width: 0;">
                 <!-- Summary / Title -->
                 <div style="position: relative; margin-bottom: 24px;">
-                    <textarea id="title-input-${story.id}" ${isAdmin ? '' : 'readonly'} oninput="document.getElementById('title-save-btn-${story.id}').style.display = 'flex';" rows="1" style="font-size: 1.4rem; font-weight: 700; color: var(--color-text-main); background: transparent; border: 1px solid transparent; width: 100%; padding: 6px 8px; border-radius: 6px; resize: none; overflow: hidden; line-height: 1.35; font-family: inherit; transition: border-color 0.15s, background 0.15s;" onfocus="this.style.border='1px solid var(--border-color)'; this.style.background='var(--bg-card)';" onblur="this.style.border='1px solid transparent'; this.style.background='transparent';">${story.title}</textarea>
+                    <textarea id="title-input-${story.id}" oninput="document.getElementById('title-save-btn-${story.id}').style.display = 'flex';" rows="1" style="font-size: 1.4rem; font-weight: 700; color: var(--color-text-main); background: transparent; border: 1px solid transparent; width: 100%; padding: 6px 8px; border-radius: 6px; resize: none; overflow: hidden; line-height: 1.35; font-family: inherit; transition: border-color 0.15s, background 0.15s;" onfocus="this.style.border='1px solid var(--border-color)'; this.style.background='var(--bg-card)';" onblur="this.style.border='1px solid transparent'; this.style.background='transparent';">${story.title}</textarea>
                     <div id="title-save-btn-${story.id}" style="display: none; margin-top: 8px; gap: 8px; justify-content: flex-end;">
                         <button type="button" onclick="updateStoryField(${projectId}, ${story.id}, 'title', document.getElementById('title-input-${story.id}').value); this.parentElement.style.display='none';" class="btn btn-primary" style="padding: 4px 12px; font-size: 0.85rem; font-weight: 600;">Save</button>
-                        <button type="button" onclick="document.getElementById('title-input-${story.id}').value = \`${(story.title || '').replace(/`/g, '\\`')}\`; this.parentElement.style.display='none';" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.85rem; font-weight: 600;">Cancel</button>
+                        <button type="button" onclick="document.getElementById('title-input-${story.id}').value = \`${(story.title || '').replace(/`/g, '\`')}\`; this.parentElement.style.display='none';" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.85rem; font-weight: 600;">Cancel</button>
                     </div>
                 </div>
 
-                    </div>
-
-                    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;">
-                        <span class="status-badge-pill ${story.status}" style="font-size: 0.8rem;">
-                            <i data-lucide="check-circle-2" style="width: 14px; height: 14px; margin-right: 4px;"></i> ${story.status === 'completed' ? 'Done' : story.status === 'in_progress' ? 'In Progress' : 'To Do'}
-                        </span>
-                        ${story.is_on_hold ? `<span class="status-badge-pill pending" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border-color: rgba(234, 179, 8, 0.2); font-size: 0.8rem;"><i data-lucide="pause-circle" style="width: 14px; height: 14px; margin-right: 4px;"></i> On Hold</span>` : ''}
-                        
-                        <select onchange="updateStoryField(${projectId}, ${story.id}, 'status', this.value)" style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 6px; color: var(--color-text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer;">
-                            <option value="pending" ${story.status === 'pending' ? 'selected' : ''}>To Do</option>
-                            <option value="in_progress" ${story.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
-                            <option value="completed" ${story.status === 'completed' ? 'selected' : ''}>Done</option>
-                        </select>
-                    </div>
-
-                    <div style="margin-bottom: 24px;">
-                        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; color: var(--color-text-main);">Description</h4>
+                <!-- Description Section -->
+                <div style="margin-bottom: 28px;">
+                    <h4 style="font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px 0; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="align-left" style="width: 16px; height: 16px; color: var(--color-primary);"></i> Description
+                    </h4>
+                    <div style="position: relative;">
                         <textarea id="desc-input-${story.id}" oninput="document.getElementById('desc-save-btn-${story.id}').style.display = 'flex';" placeholder="Add a description..." style="width: 100%; min-height: 90px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; color: var(--color-text-main); font-size: 0.95rem; line-height: 1.5; resize: vertical; font-family: inherit;">${story.description || ''}</textarea>
                         <div id="desc-save-btn-${story.id}" style="display: none; margin-top: 8px; gap: 8px; justify-content: flex-end;">
                             <button type="button" onclick="updateStoryField(${projectId}, ${story.id}, 'description', document.getElementById('desc-input-${story.id}').value); this.parentElement.style.display='none';" class="btn btn-primary" style="padding: 4px 12px; font-size: 0.85rem; font-weight: 600;">Save</button>
-                            <button type="button" onclick="document.getElementById('desc-input-${story.id}').value = \`${(story.description || '').replace(/`/g, '\\`')}\`; this.parentElement.style.display='none';" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.85rem; font-weight: 600;">Cancel</button>
+                            <button type="button" onclick="document.getElementById('desc-input-${story.id}').value = \`${(story.description || '').replace(/`/g, '\`')}\`; this.parentElement.style.display='none';" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.85rem; font-weight: 600;">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -2233,7 +2222,7 @@ function renderStoriesListView(storiesList, projectId) {
                 <td style="padding: 10px 14px;">
                     <input type="date"
                         value="${story.due_date ? story.due_date.split('T')[0] : ''}"
-                        ${isAdmin ? '' : 'disabled'}
+                        
                         onchange="updateStoryField(${projectId}, ${story.id}, 'due_date', this.value || null)"
                         style="border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.82rem; color: var(--color-text-main); background: var(--bg-card); cursor: pointer; outline: none; width: 130px; ${story.due_date && new Date(story.due_date) < new Date() && statusVal !== 'Complete' ? 'border-color: #EF4444; color: #EF4444;' : ''}"
                         onfocus="this.style.borderColor='var(--color-primary)'"
@@ -2245,7 +2234,7 @@ function renderStoriesListView(storiesList, projectId) {
                 <td style="padding: 10px 14px;">
                     <div style="display: flex; align-items: center;">
                         ${priorityIconHtml}
-                        <select ${isAdmin ? '' : 'disabled'} onchange="updateStoryField(${projectId}, ${story.id}, 'priority', this.value)" style="background: transparent; border: none; font-size: 0.84rem; color: var(--color-text-main); font-weight: 600; cursor: pointer; outline: none;">
+                        <select  onchange="updateStoryField(${projectId}, ${story.id}, 'priority', this.value)" style="background: transparent; border: none; font-size: 0.84rem; color: var(--color-text-main); font-weight: 600; cursor: pointer; outline: none;">
                             <option value="Low" ${story.priority === 'Low' ? 'selected' : ''}>Low</option>
                             <option value="Medium" ${story.priority === 'Medium' || !story.priority ? 'selected' : ''}>Medium</option>
                             <option value="High" ${story.priority === 'High' ? 'selected' : ''}>High</option>
@@ -2366,7 +2355,7 @@ function renderStoriesListView(storiesList, projectId) {
                         <td style="padding: 8px 14px;">
                             <input type="date"
                                 value="${t.due_date ? t.due_date.split('T')[0] : ''}"
-                                ${isAdmin ? '' : 'disabled'}
+                                
                                 onchange="updateTaskField(${projectId}, ${story.id}, ${t.id}, 'due_date', this.value || null)"
                                 style="border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-size: 0.82rem; color: var(--color-text-main); background: var(--bg-card); cursor: pointer; outline: none; width: 130px; ${t.due_date && new Date(t.due_date) < new Date() && taskStatusVal !== 'Complete' ? 'border-color: #EF4444; color: #EF4444;' : ''}"
                                 onfocus="this.style.borderColor='var(--color-primary)'"
@@ -2464,7 +2453,7 @@ function renderStoriesListView(storiesList, projectId) {
             <td style="padding: 12px 16px;" onclick="event.stopPropagation()">
                 <div style="display: flex; align-items: center;">
                     ${priorityIconHtml}
-                    <select ${isAdmin ? '' : 'disabled'} onchange="updateMilestoneField(${state.globalProjectId}, ${ms.id}, 'priority', this.value)" style="background: transparent; border: none; font-size: 0.84rem; color: var(--color-text-main); font-weight: 600; cursor: pointer; outline: none;">
+                    <select  onchange="updateMilestoneField(${state.globalProjectId}, ${ms.id}, 'priority', this.value)" style="background: transparent; border: none; font-size: 0.84rem; color: var(--color-text-main); font-weight: 600; cursor: pointer; outline: none;">
                         <option value="Low" ${ms.priority === 'Low' ? 'selected' : ''}>Low</option>
                         <option value="Medium" ${ms.priority === 'Medium' || !ms.priority ? 'selected' : ''}>Medium</option>
                         <option value="High" ${ms.priority === 'High' ? 'selected' : ''}>High</option>
@@ -2997,6 +2986,17 @@ window.jiraListUpdateSelection = function () {
     if (checked.length > 0) {
         bar.style.display = 'flex';
         countEl.textContent = checked.length;
+        
+        // Hide delete for non-admins
+        const isGlobalAdmin = state.user?.is_global_admin;
+        const isProjManager = ['Owner', 'Manager'].includes(state.currentProjectRole);
+        const isAdmin = isGlobalAdmin || isProjManager;
+        const deleteBtn = document.getElementById('bulk-delete-btn');
+        const deleteDiv = document.getElementById('bulk-delete-divider');
+        if (deleteBtn && deleteDiv) {
+            deleteBtn.style.display = isAdmin ? 'flex' : 'none';
+            deleteDiv.style.display = isAdmin ? 'inline' : 'none';
+        }
     } else {
         bar.style.display = 'none';
     }

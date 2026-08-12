@@ -2435,7 +2435,7 @@ h4 {
     background: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: 40px;
-    padding: 6px 6px 6px 20px;
+    padding: 12px 12px 12px 24px;
 }
 
 .chat-input-bar input {
@@ -2443,7 +2443,8 @@ h4 {
     background: transparent;
     border: none;
     color: var(--color-text-main);
-    font-size: 14px;
+    font-size: 1.05rem;
+    line-height: 1.5;
 }
 
 .chat-input-bar input::placeholder {
