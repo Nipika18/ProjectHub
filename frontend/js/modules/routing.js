@@ -45,13 +45,17 @@ async function initApp() {
     } else {
         showAuthModal(false);
         const success = await fetchUserProfile();
-        if (success) {
+        if (success === true) {
             populateProjectDropdowns(); // Run in parallel
             handleRouting();
             loadWorkspaceData(); // Run in parallel
-        } else {
+        } else if (success === false) {
             // Token expired or invalid
             signOut();
+        } else {
+            // Network issue, rate limit, or 500 error (returned null)
+            // Do not sign out. Just hide modal so they see the toast and can manually refresh later.
+            showAuthModal(false);
         }
     }
 }

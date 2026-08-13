@@ -319,7 +319,12 @@ async function fetchUserProfile() {
         const response = await fetch(`${API_BASE}/api/auth/me`, {
             headers: { "Authorization": `Bearer ${state.token}` }
         });
-        if (!response.ok) return false;
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                return false; // Actually expired or invalid token
+            }
+            throw new Error(`Server returned ${response.status}`);
+        }
 
         state.user = await response.json();
 
@@ -345,7 +350,9 @@ async function fetchUserProfile() {
 
         return true;
     } catch (e) {
-        return false;
+        console.error("fetchUserProfile error:", e);
+        showToast("Connection issue: Could not reach server. Please wait a moment.", "error");
+        return null; // Return null instead of false to prevent instant logout on network/rate-limit issues
     }
 }
 
