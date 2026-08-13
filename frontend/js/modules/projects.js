@@ -52,12 +52,19 @@ function bindProjectEvents() {
                 });
 
                 if (!response.ok) throw new Error("Could not create project.");
+                
+                const createdProject = await response.json();
 
                 showToast("Project created successfully!", "success");
                 form.reset();
                 if (modal) modal.classList.remove("active");
-                loadProjects();
+                
+                // Fetch the updated list of projects to ensure state.projects is up to date
+                await loadProjects();
                 loadWorkspaceData(); // Refresh counts
+                
+                // Automatically route the user to their newly created project
+                window.location.hash = `#projects/${createdProject.id}`;
             } catch (e) {
                 showToast(e.message, "error");
             } finally {

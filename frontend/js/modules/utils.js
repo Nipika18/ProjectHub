@@ -255,6 +255,14 @@ async function populateProjectDropdowns(force = false) {
             if (globalSelect) globalSelect.appendChild(fragGlobal);
         }
 
+        if (state.globalProjectId) {
+            const projExists = state.projects && state.projects.some(p => p.id == state.globalProjectId);
+            if (!projExists) {
+                state.globalProjectId = null;
+                localStorage.removeItem("globalProjectId");
+            }
+        }
+
         const effectiveGlobal = state.globalProjectId || (globalSelect ? globalSelect.value : "") || "";
         if (globalSelect) {
             globalSelect.value = effectiveGlobal;

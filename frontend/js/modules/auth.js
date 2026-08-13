@@ -420,11 +420,11 @@ function applyRBACUI() {
     sidebarNavItems.forEach(item => {
         const id = item.id;
         const href = item.getAttribute("href") || "";
-        if (href === "#dashboard") {
-            // Dashboard is always visible for everyone
+        if (href === "#dashboard" || href === "#projects") {
+            // Dashboard and Projects are always visible for everyone
             item.style.display = "flex";
         } else {
-            // For non-admins: show other sections (including Milestones and Projects) only after a project is selected
+            // For non-admins: show other sections (Milestones, Stories, etc.) only after a project is selected
             item.style.display = (isAdmin || hasProjectSelected) ? "flex" : "none";
         }
     });
@@ -489,11 +489,13 @@ function applyRBACUI() {
 function signOut() {
     localStorage.removeItem("token");
     localStorage.removeItem("refresh_token");
+    localStorage.removeItem("globalProjectId");
     state.token = null;
     state.refreshToken = null;
     state.user = null;
     state.projects = [];
     state.currentProject = null;
+    state.globalProjectId = null;
     state.chatSessions = {};
 
     // Clear display
