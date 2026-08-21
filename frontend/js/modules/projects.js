@@ -165,7 +165,10 @@ function bindProjectEvents() {
             const elId = document.getElementById("milestone-project-id");
             if (elId && state.currentProject) elId.value = state.currentProject.id;
             window.location.hash = "#milestones";
-            document.getElementById("create-milestone-modal")?.classList.add("active");
+            
+            setTimeout(() => {
+                document.getElementById("create-milestone-modal")?.classList.add("active");
+            }, 100);
         });
     }
 
@@ -491,7 +494,7 @@ function buildMilestoneCardHtml(milestone, projectId, docs, stories, canManage, 
             </div>
             <div class="milestone-header-right" style="display: flex; align-items: center; gap: 8px;">
                 ${canManage ? `
-                <button class="btn btn-ask-ai-gradient btn-sm" onclick="generateStoriesForMilestone(${projectId}, ${milestone.id}, this)" title="Generate User Stories for Milestone" style="border-radius: 12px; font-weight: 600; padding: 4px 10px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px;">
+                <button class="btn btn-ask-ai-gradient btn-sm" onclick="generateStoriesForMilestone(${projectId}, ${milestone.id}, '${safeTitle}', ${hasDocs}, this)" title="Generate User Stories for Milestone" style="border-radius: 12px; font-weight: 600; padding: 4px 10px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px;">
                     <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Generate Stories
                 </button>
                 ` : ''}
@@ -529,8 +532,14 @@ function buildMilestoneCardHtml(milestone, projectId, docs, stories, canManage, 
         </div>`;
 }
 
-async function generateStoriesForMilestone(projectId, milestoneId, btnElement) {
+async function generateStoriesForMilestone(projectId, milestoneId, milestoneTitle, hasDocs, btnElement) {
     if (!checkAdminAccess("generate stories")) return;
+
+    if (!hasDocs) {
+        showToast(`Please upload a document to milestone "${milestoneTitle}" first.`, "info");
+        openMilestoneUploadModal(projectId, milestoneId, milestoneTitle);
+        return;
+    }
 
     if (!confirm("Are you sure you want to generate stories for this milestone? This will process all attached documents using AI.")) {
         return;
