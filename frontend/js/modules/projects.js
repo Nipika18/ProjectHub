@@ -165,7 +165,6 @@ function bindProjectEvents() {
             const elId = document.getElementById("milestone-project-id");
             if (elId && state.currentProject) elId.value = state.currentProject.id;
             window.location.hash = "#milestones";
-            
             setTimeout(() => {
                 document.getElementById("create-milestone-modal")?.classList.add("active");
             }, 100);
@@ -540,7 +539,6 @@ async function generateStoriesForMilestone(projectId, milestoneId, milestoneTitl
         openMilestoneUploadModal(projectId, milestoneId, milestoneTitle);
         return;
     }
-
     if (!confirm("Are you sure you want to generate stories for this milestone? This will process all attached documents using AI.")) {
         return;
     }
