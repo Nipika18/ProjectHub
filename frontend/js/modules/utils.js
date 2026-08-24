@@ -278,9 +278,27 @@ async function populateProjectDropdowns(force = false) {
             if (createMilestoneSelect) createMilestoneSelect.value = effectiveGlobal;
             if (storyProjSelect) storyProjSelect.value = effectiveGlobal;
         }
+        updateMobileProjectBadge();
     } catch (e) {
         console.error("Failed to fetch projects list for dropdowns:", e);
     }
+}
+
+function updateMobileProjectBadge() {
+    const badge = document.getElementById("mobile-active-project-badge");
+    const nameSpan = document.getElementById("mobile-project-name");
+    const globalSelect = document.getElementById("global-project-select");
+    if (!badge || !nameSpan || !globalSelect) return;
+
+    if (globalSelect.value && globalSelect.selectedOptions && globalSelect.selectedOptions[0]) {
+        const text = globalSelect.selectedOptions[0].text;
+        if (text && !text.startsWith("—")) {
+            nameSpan.textContent = text;
+            badge.style.display = "flex";
+            return;
+        }
+    }
+    badge.style.display = "none";
 }
 
 // ── Global Project Selector: propagate selection to all page dropdowns ──
@@ -303,6 +321,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             globalSelect.classList.remove("selected-bold");
         }
+        updateMobileProjectBadge();
 
         // Update sidebar visibility for non-admin users (unlocks nav on project select)
         applyRBACUI();
@@ -363,6 +382,13 @@ document.addEventListener("mouseover", (e) => {
     }
     const text = target.getAttribute("data-tooltip");
     if (!text) return;
+
+    // Skip targets that have their own custom CSS tooltips in the collapsed sidebar
+    if (target.closest('.app-layout.sidebar-collapsed')) {
+        if (target.classList.contains('nav-item') || target.classList.contains('user-badge')) {
+            return;
+        }
+    }
 
     if (!customTooltipEl.parentNode) document.body.appendChild(customTooltipEl);
     customTooltipEl.textContent = text;

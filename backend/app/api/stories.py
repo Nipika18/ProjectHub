@@ -1,9 +1,16 @@
 import json
+import threading
+import logging
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import case
 from typing import List, Optional
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
+
+VALID_PRIORITIES = {"Low", "Medium", "High", "Critical"}
+VALID_STORY_POINTS = {1, 2, 3, 5, 8}
 
 from backend.app.core.database import get_db
 from backend.app.core.security import get_current_user, get_current_admin_user, check_is_project_manager_or_admin, check_is_project_member_or_admin
@@ -25,6 +32,21 @@ except ImportError:
 
 router = APIRouter(prefix="/api/projects/{project_id}/stories", tags=["stories"])
 
+_gen_lock = threading.Lock()
+ACTIVE_STORY_GENERATIONS = set()
+
+@router.get("/active-generations")
+def get_active_generations(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Returns a list of currently generating story keys (e.g., 'milestone_id' or 'document_id')
+    so the frontend can resume spinning spinners after a page reload.
+    """
+    check_is_project_member_or_admin(db, current_user, project_id)
+    return list(ACTIVE_STORY_GENERATIONS)
 
 def _auto_assign_tasks(db: Session, project_id: int, stories: list):
     """
@@ -82,10 +104,10 @@ def _clean_stories_inputs(inputs: dict) -> dict:
     return cleaned
 
 @router.post("/generate")
-@traceable(name="Project User Stories Generation", run_type="chain", process_inputs=_clean_stories_inputs)
 def generate_stories_from_documents(
     project_id: int,
     request: schemas.GenerateStoriesRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -97,6 +119,13 @@ def generate_stories_from_documents(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
         
+    source_name = "the documents"
+    if request.milestone_id:
+        from backend.app.models import Milestone
+        ms = db.query(Milestone).filter(Milestone.id == request.milestone_id).first()
+        if ms:
+            source_name = f"milestone '{ms.title}'"
+        
     # Get document chunks for context
     query = db.query(DocumentChunk).join(Document, DocumentChunk.document_id == Document.id).filter(Document.project_id == project_id)
     
@@ -105,99 +134,150 @@ def generate_stories_from_documents(
     elif request.document_ids:
         query = query.filter(Document.id.in_(request.document_ids))
         
+    total_chunks = query.count()
     chunks = query.order_by(DocumentChunk.document_id, DocumentChunk.chunk_index).limit(50).all()
+    if total_chunks > 50:
+        logger.warning(f"Document context has {total_chunks} chunks but only first 50 are used for project {project_id}")
     
     if not chunks:
         if request.milestone_id:
             raise HTTPException(status_code=400, detail="No documents found in this milestone. Please attach a document first to generate stories.")
         raise HTTPException(status_code=400, detail="No document content found to analyze.")
-        
-    existing_db_stories = db.query(UserStory).filter(UserStory.project_id == project_id).all()
-    existing_titles = [s.title.strip() for s in existing_db_stories if s.title]
-    existing_titles_prompt = "\n".join([f"- {t}" for t in existing_titles[:30]]) if existing_titles else "None"
-    seen_titles_lower = {t.lower() for t in existing_titles}
 
-    context_text = "\n\n".join([chunk.content for chunk in chunks])
-    available_roles = _get_available_project_roles(db, project_id)
-    prompt = get_global_stories_prompt(context_text, existing_titles_prompt, available_roles)
-    
-    try:
-        client = _openai_client
-        response = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-            max_tokens=2500,
-            response_format={"type": "json_object"}
-        )
-        
-        result_json = json.loads(response.choices[0].message.content)
-        stories_data = result_json.get("stories", [])
-        
-        # Save to DB
-        created_stories = []
-        for s_data in stories_data:
-            title_str = s_data.get("title", "Untitled Story").strip()
-            title_lower = title_str.lower()
-            if title_lower in seen_titles_lower or any(title_lower in st or st in title_lower for st in seen_titles_lower if len(st) > 15):
-                continue
-            seen_titles_lower.add(title_lower)
+    gen_key = f"milestone_{request.milestone_id}" if request.milestone_id else f"documents_{'_'.join(map(str, request.document_ids or []))}"
+    with _gen_lock:
+        if gen_key in ACTIVE_STORY_GENERATIONS:
+            raise HTTPException(status_code=400, detail="Stories are already being generated for this milestone/document.")
+        ACTIVE_STORY_GENERATIONS.add(gen_key)
 
-            sp = s_data.get("story_points", 1)
-            try:
-                sp = int(sp)
-            except (ValueError, TypeError):
-                sp = 1
+    @traceable(name="Project User Stories Generation (Background)", run_type="chain")
+    def _run_generation_sync():
+        from backend.app.core.database import SessionLocal
+        bg_db = SessionLocal()
+        try:
+            existing_db_stories = bg_db.query(UserStory).filter(UserStory.project_id == project_id).all()
+            existing_titles = [s.title.strip() for s in existing_db_stories if s.title]
+            existing_titles_prompt = "\n".join([f"- {t}" for t in existing_titles]) if existing_titles else "None"
+            seen_titles_lower = {t.lower() for t in existing_titles}
 
-            new_story = UserStory(
-                project_id=project_id,
-                title=s_data.get("title", "Untitled Story"),
-                description=s_data.get("description", ""),
-                acceptance_criteria=s_data.get("acceptance_criteria", []),
-                priority=s_data.get("priority", "Medium"),
-                story_points=sp,
-                status="To Do",
-                milestone_id=request.milestone_id
+            context_text = "\n\n".join([chunk.content for chunk in chunks])
+            available_roles = _get_available_project_roles(bg_db, project_id)
+            prompt = get_global_stories_prompt(context_text, existing_titles_prompt, available_roles)
+            
+            client = _openai_client
+            response = client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,
+                max_tokens=4096,
+                response_format={"type": "json_object"}
             )
-            db.add(new_story)
-            db.flush()
             
-            subtasks = s_data.get("subtasks", [])
-            for t_data in subtasks:
-                task_type = t_data.get("type", "Backend")
-                if task_type not in available_roles:
-                    task_type = "Manager"
-                    
-                new_task = Task(
-                    story_id=new_story.id,
-                    title=t_data.get("title", "Untitled Task"),
-                    task_type=task_type,
-                    status="To Do"
+            try:
+                result_json = json.loads(response.choices[0].message.content)
+            except json.JSONDecodeError as e:
+                logger.error(f"OpenAI returned malformed JSON: {response.choices[0].message.content[:200]}")
+                return 0, "AI returned an incomplete response. Please try again."
+            stories_data = result_json.get("stories", [])
+            
+            # Save to DB
+            created_stories = []
+            for s_data in stories_data:
+                title_str = s_data.get("title", "Untitled Story").strip()
+                title_lower = title_str.lower()
+                if title_lower in seen_titles_lower or (len(title_lower) > 15 and any(title_lower in st or st in title_lower for st in seen_titles_lower if len(st) > 15)):
+                    continue
+                seen_titles_lower.add(title_lower)
+
+                sp = s_data.get("story_points", 1)
+                try:
+                    sp = int(sp)
+                except (ValueError, TypeError):
+                    sp = 1
+
+                priority = s_data.get("priority", "Medium")
+                if priority not in VALID_PRIORITIES:
+                    priority = "Medium"
+                if sp not in VALID_STORY_POINTS:
+                    sp = min(VALID_STORY_POINTS, key=lambda x: abs(x - sp))
+
+                new_story = UserStory(
+                    project_id=project_id,
+                    title=s_data.get("title", "Untitled Story"),
+                    description=s_data.get("description", ""),
+                    acceptance_criteria=s_data.get("acceptance_criteria", []),
+                    priority=priority,
+                    story_points=sp,
+                    status="To Do",
+                    milestone_id=request.milestone_id
                 )
-                db.add(new_task)
-            
-            created_stories.append(new_story)
-            
-        db.commit()
+                bg_db.add(new_story)
+                bg_db.flush()
+                
+                subtasks = s_data.get("subtasks", [])
+                for t_data in subtasks:
+                    task_type = t_data.get("type", "Backend")
+                    if task_type not in available_roles:
+                        task_type = "Manager"
+                        
+                    new_task = Task(
+                        story_id=new_story.id,
+                        title=t_data.get("title", "Untitled Task"),
+                        task_type=task_type,
+                        status="To Do"
+                    )
+                    bg_db.add(new_task)
+                
+                created_stories.append(new_story)
+                
+            bg_db.commit()
 
-        # Auto-assign tasks to team members based on role
-        # Refresh stories to get full relationships
-        for s in created_stories:
-            db.refresh(s)
-        _auto_assign_tasks(db, project_id, created_stories)
+            for s in created_stories:
+                bg_db.refresh(s)
+            _auto_assign_tasks(bg_db, project_id, created_stories)
+            return len(created_stories), None
+        except Exception as e:
+            bg_db.rollback()
+            print(f"Error generating stories: {e}")
+            return 0, str(e)
+        finally:
+            bg_db.close()
 
-        return {"message": "Successfully generated stories", "count": len(created_stories)}
-        
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to generate stories: {str(e)}")
+    async def _run_generation():
+        import asyncio
+        from backend.app.core.websockets import manager
+        try:
+            count, error = await asyncio.to_thread(_run_generation_sync)
+            if error:
+                await manager.broadcast({
+                    "type": "stories_generated",
+                    "milestone_id": request.milestone_id,
+                    "document_id": None,
+                    "status": "error",
+                    "error": error,
+                    "source_name": source_name
+                })
+            else:
+                await manager.broadcast({
+                    "type": "stories_generated",
+                    "milestone_id": request.milestone_id,
+                    "document_id": None,
+                    "status": "success",
+                    "count": count,
+                    "source_name": source_name
+                })
+        finally:
+            ACTIVE_STORY_GENERATIONS.discard(gen_key)
 
+    background_tasks.add_task(_run_generation)
+    return {"message": "Generation started in the background", "status": "processing"}
 
 @router.post("/generate-from-document")
 @traceable(name="Document User Stories Generation", run_type="chain", process_inputs=_clean_stories_inputs)
 def generate_stories_from_single_document(
     project_id: int,
     request: schemas.GenerateStoriesFromDocumentRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -216,95 +296,144 @@ def generate_stories_from_single_document(
         raise HTTPException(status_code=404, detail="Document not found in this project")
 
     # Get chunks for this specific document only
+    total_chunks = db.query(DocumentChunk).filter(DocumentChunk.document_id == request.document_id).count()
     chunks = db.query(DocumentChunk).filter(
         DocumentChunk.document_id == request.document_id
     ).order_by(DocumentChunk.chunk_index).limit(50).all()
+    if total_chunks > 50:
+        logger.warning(f"Document {request.document_id} has {total_chunks} chunks but only first 50 are used")
 
     if not chunks:
         raise HTTPException(status_code=400, detail="No indexed content found for this document. It may still be processing.")
 
-    existing_db_stories = db.query(UserStory).filter(UserStory.project_id == project_id).all()
-    existing_titles = [s.title.strip() for s in existing_db_stories if s.title]
-    existing_titles_prompt = "\n".join([f"- {t}" for t in existing_titles[:30]]) if existing_titles else "None"
-    seen_titles_lower = {t.lower() for t in existing_titles}
+    gen_key = f"document_{request.document_id}"
+    with _gen_lock:
+        if gen_key in ACTIVE_STORY_GENERATIONS:
+            raise HTTPException(status_code=400, detail="Stories are already being generated for this document.")
+        ACTIVE_STORY_GENERATIONS.add(gen_key)
 
-    context_text = "\n\n".join([chunk.content for chunk in chunks])
-    available_roles = _get_available_project_roles(db, project_id)
-    prompt = get_single_document_stories_prompt(doc.name, context_text, existing_titles_prompt, available_roles)
+    @traceable(name="Single Document User Stories Generation", run_type="chain")
+    def _run_single_doc_generation_sync():
+        from backend.app.core.database import SessionLocal
+        bg_db = SessionLocal()
+        try:
+            existing_db_stories = bg_db.query(UserStory).filter(UserStory.project_id == project_id).all()
+            existing_titles = [s.title.strip() for s in existing_db_stories if s.title]
+            existing_titles_prompt = "\n".join([f"- {t}" for t in existing_titles]) if existing_titles else "None"
+            seen_titles_lower = {t.lower() for t in existing_titles}
 
-    try:
-        client = _openai_client
-        response = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-            max_tokens=2500,
-            response_format={"type": "json_object"}
-        )
+            context_text = "\n\n".join([chunk.content for chunk in chunks])
+            available_roles = _get_available_project_roles(bg_db, project_id)
+            prompt = get_single_document_stories_prompt(doc.name, context_text, existing_titles_prompt, available_roles)
 
-        result_json = json.loads(response.choices[0].message.content)
-        stories_data = result_json.get("stories", [])
-
-        created_stories = []
-        for s_data in stories_data:
-            title_str = s_data.get("title", "Untitled Story").strip()
-            title_lower = title_str.lower()
-            if title_lower in seen_titles_lower or any(title_lower in st or st in title_lower for st in seen_titles_lower if len(st) > 15):
-                continue
-            seen_titles_lower.add(title_lower)
-
-            sp = s_data.get("story_points", 1)
-            try:
-                sp = int(sp)
-            except (ValueError, TypeError):
-                sp = 1
-
-            new_story = UserStory(
-                project_id=project_id,
-                document_id=request.document_id,
-                title=s_data.get("title", "Untitled Story"),
-                description=s_data.get("description", ""),
-                acceptance_criteria=s_data.get("acceptance_criteria", []),
-                priority=s_data.get("priority", "Medium"),
-                story_points=sp,
-                status="To Do",
-                milestone_id=doc.milestone_id
+            client = _openai_client
+            response = client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,
+                max_tokens=4096,
+                response_format={"type": "json_object"}
             )
-            db.add(new_story)
-            db.flush()
 
-            subtasks = s_data.get("subtasks", [])
-            for t_data in subtasks:
-                task_type = t_data.get("type", "Backend")
-                if task_type not in available_roles:
-                    task_type = "Manager"
+            try:
+                result_json = json.loads(response.choices[0].message.content)
+            except json.JSONDecodeError as e:
+                logger.error(f"OpenAI returned malformed JSON for doc {request.document_id}: {response.choices[0].message.content[:200]}")
+                return 0, "AI returned an incomplete response. Please try again."
+            stories_data = result_json.get("stories", [])
 
-                new_task = Task(
-                    story_id=new_story.id,
-                    title=t_data.get("title", "Untitled Task"),
-                    task_type=task_type,
-                    status="To Do"
+            created_stories = []
+            for s_data in stories_data:
+                title_str = s_data.get("title", "Untitled Story").strip()
+                title_lower = title_str.lower()
+                if title_lower in seen_titles_lower or (len(title_lower) > 15 and any(title_lower in st or st in title_lower for st in seen_titles_lower if len(st) > 15)):
+                    continue
+                seen_titles_lower.add(title_lower)
+
+                sp = s_data.get("story_points", 1)
+                try:
+                    sp = int(sp)
+                except (ValueError, TypeError):
+                    sp = 1
+
+                priority = s_data.get("priority", "Medium")
+                if priority not in VALID_PRIORITIES:
+                    priority = "Medium"
+                if sp not in VALID_STORY_POINTS:
+                    sp = min(VALID_STORY_POINTS, key=lambda x: abs(x - sp))
+
+                new_story = UserStory(
+                    project_id=project_id,
+                    document_id=request.document_id,
+                    title=s_data.get("title", "Untitled Story"),
+                    description=s_data.get("description", ""),
+                    acceptance_criteria=s_data.get("acceptance_criteria", []),
+                    priority=priority,
+                    story_points=sp,
+                    status="To Do",
+                    milestone_id=doc.milestone_id
                 )
-                db.add(new_task)
+                bg_db.add(new_story)
+                bg_db.flush()
 
-            created_stories.append(new_story)
+                subtasks = s_data.get("subtasks", [])
+                for t_data in subtasks:
+                    task_type = t_data.get("type", "Backend")
+                    if task_type not in available_roles:
+                        task_type = "Manager"
 
-        db.commit()
+                    new_task = Task(
+                        story_id=new_story.id,
+                        title=t_data.get("title", "Untitled Task"),
+                        task_type=task_type,
+                        status="To Do"
+                    )
+                    bg_db.add(new_task)
 
-        # Auto-assign tasks to team members based on role
-        for s in created_stories:
-            db.refresh(s)
-        _auto_assign_tasks(db, project_id, created_stories)
+                created_stories.append(new_story)
 
-        return {
-            "message": f"Generated {len(created_stories)} stories from '{doc.name}'",
-            "count": len(created_stories),
-            "document_name": doc.name
-        }
+            bg_db.commit()
 
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to generate stories: {str(e)}")
+            # Auto-assign tasks to team members based on role
+            for s in created_stories:
+                bg_db.refresh(s)
+            _auto_assign_tasks(bg_db, project_id, created_stories)
+            return len(created_stories), None
+        except Exception as e:
+            bg_db.rollback()
+            print(f"Error generating stories for single document: {e}")
+            return 0, str(e)
+        finally:
+            bg_db.close()
+            
+    async def _run_single_doc_generation():
+        import asyncio
+        from backend.app.core.websockets import manager
+        try:
+            count, error = await asyncio.to_thread(_run_single_doc_generation_sync)
+            if error:
+                await manager.broadcast({
+                    "type": "stories_generated",
+                    "milestone_id": None,
+                    "document_id": request.document_id,
+                    "status": "error",
+                    "error": error,
+                    "source_name": f"document '{doc.name}'"
+                })
+            else:
+                await manager.broadcast({
+                    "type": "stories_generated",
+                    "milestone_id": None,
+                    "document_id": request.document_id,
+                    "status": "success",
+                    "count": count,
+                    "source_name": f"document '{doc.name}'"
+                })
+        finally:
+            ACTIVE_STORY_GENERATIONS.discard(gen_key)
+
+    background_tasks.add_task(_run_single_doc_generation)
+    return {"message": "Generation started in the background", "status": "processing"}
 
 
 @router.post("", response_model=schemas.UserStory)
@@ -443,12 +572,12 @@ def update_story(
     """
     Updates a user story's details.
     """
+    # Check project membership first (auth before query)
+    check_is_project_member_or_admin(db, current_user, project_id)
+    
     story = db.query(UserStory).filter(UserStory.id == story_id, UserStory.project_id == project_id).first()
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
-        
-    # Check project membership
-    check_is_project_member_or_admin(db, current_user, project_id)
 
     if "title" in request.model_fields_set:
         story.title = request.title
@@ -468,7 +597,7 @@ def update_story(
         story.comments = request.comments
     if "due_date" in request.model_fields_set:
         story.due_date = request.due_date
-    if hasattr(request, 'milestone_id') and request.milestone_id is not None:
+    if "milestone_id" in request.model_fields_set:
         story.milestone_id = request.milestone_id
         
     db.commit()
@@ -487,6 +616,9 @@ def update_task(
     """
     Updates a specific task within a story.
     """
+    # Check project membership first (auth before query)
+    check_is_project_member_or_admin(db, current_user, project_id)
+    
     # Verify story belongs to project
     story = db.query(UserStory).filter(UserStory.id == story_id, UserStory.project_id == project_id).first()
     if not story:
@@ -497,9 +629,8 @@ def update_task(
         raise HTTPException(status_code=404, detail="Task not found")
         
     old_assignee = task.assigned_to
-        
-    # Check project membership
-    check_is_project_member_or_admin(db, current_user, project_id)
+    
+    project = db.query(Project).filter(Project.id == project_id).first()
 
     if "title" in request.model_fields_set:
         task.title = request.title
@@ -552,11 +683,11 @@ def delete_story(
     """
     Deletes a user story.
     """
+    check_is_project_manager_or_admin(db, current_user, project_id)
+    
     story = db.query(UserStory).filter(UserStory.id == story_id, UserStory.project_id == project_id).first()
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
-
-    check_is_project_manager_or_admin(db, current_user, project_id)
         
     db.delete(story)
     db.commit()
@@ -573,11 +704,11 @@ def delete_task(
     """
     Deletes a task.
     """
+    check_is_project_manager_or_admin(db, current_user, project_id)
+    
     story = db.query(UserStory).filter(UserStory.id == story_id, UserStory.project_id == project_id).first()
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
-
-    check_is_project_manager_or_admin(db, current_user, project_id)
         
     task = db.query(Task).filter(Task.id == task_id, Task.story_id == story_id).first()
     if not task:

@@ -25,7 +25,7 @@ async function loadTeamMembers(projectId) {
         const isAdmin = isGlobalAdmin || isProjManager;
 
         members.forEach(m => {
-            let roleColor = '#2563eb';
+            let roleColor = 'var(--color-primary)';
             if (m.role === 'Frontend') roleColor = '#f59e0b';
             else if (m.role === 'AI') roleColor = '#10b981';
             else if (m.role === 'Manager') roleColor = '#8b5cf6';
@@ -93,6 +93,10 @@ async function loadProjectDetailDocuments(projectId) {
     listEl.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">Loading documents...</td></tr>';
 
     try {
+        if (typeof window.syncActiveGenerations === "function") {
+            await window.syncActiveGenerations(projectId);
+        }
+
         const [docs, milestones] = await Promise.all([
             fetchProjectDocuments(projectId),
             fetch(`${API_BASE}/api/milestones/project/${projectId}`, {

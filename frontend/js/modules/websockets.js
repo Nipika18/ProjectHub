@@ -4,6 +4,8 @@
 
 let ws = null;
 let reconnectInterval = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_DELAY = 30000; // 30 seconds max
 
 function connectWebSocket() {
     // Only connect if we have a valid auth token
@@ -30,8 +32,9 @@ function connectWebSocket() {
 
     ws.onopen = () => {
         console.log("[WebSocket] Connected successfully");
+        reconnectAttempts = 0; // Reset on successful connection
         if (reconnectInterval) {
-            clearInterval(reconnectInterval);
+            clearTimeout(reconnectInterval);
             reconnectInterval = null;
         }
     };
@@ -47,9 +50,15 @@ function connectWebSocket() {
 
     ws.onclose = (event) => {
         console.log("[WebSocket] Disconnected", event.code);
-        // Attempt to reconnect every 5 seconds if we are still logged in
+        // Attempt to reconnect with exponential backoff if we are still logged in
         if (state.token && !reconnectInterval) {
-            reconnectInterval = setInterval(connectWebSocket, 5000);
+            reconnectAttempts++;
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), MAX_RECONNECT_DELAY);
+            console.log(`[WebSocket] Reconnecting in ${delay / 1000}s (attempt ${reconnectAttempts})`);
+            reconnectInterval = setTimeout(() => {
+                reconnectInterval = null;
+                connectWebSocket();
+            }, delay);
         }
     };
 }
@@ -86,6 +95,61 @@ function handleWebSocketMessage(data) {
             }
         } else {
             showToast(`Failed to process document "${name}": ${error || 'Unknown error'}`, "error");
+        }
+    } else if (data.type === "stories_generated") {
+        const { milestone_id, document_id, status, count, error, source_name } = data;
+        
+        // Clear active generation state
+        if (milestone_id && state.activeMilestoneGenerations) {
+            delete state.activeMilestoneGenerations[milestone_id];
+        }
+        if (document_id && state.activeGenerations) {
+            delete state.activeGenerations[document_id];
+        }
+        if (typeof window.updateGlobalGeneratingBanner === "function") {
+            window.updateGlobalGeneratingBanner();
+        }
+
+        // Show toast and refresh UI
+        if (status === 'success') {
+            const suffix = source_name ? ` from ${source_name}` : "";
+            showToast(`Successfully generated ${count} stories${suffix}!`, "success");
+            
+            // Reload if we are viewing the relevant project
+            if (state.currentProject) {
+                if (typeof refreshMilestoneViewsForProject === "function") {
+                    refreshMilestoneViewsForProject(state.currentProject.id);
+                }
+                
+                // If on the User Stories section, reload stories list
+                const storyProjSelect = document.getElementById("story-project-select");
+                if (state.activeSection === "stories" && storyProjSelect && parseInt(storyProjSelect.value) === state.currentProject.id) {
+                    if (typeof loadStories === "function") loadStories();
+                }
+            }
+            if (typeof loadWorkspaceData === "function") loadWorkspaceData();
+        } else {
+            showToast(`Failed to generate stories: ${error || 'Unknown error'}`, "error");
+            
+            // Re-enable button manually if we're not reloading the whole view
+            if (document_id) {
+                const btn = document.getElementById(`btn-gen-stories-${document_id}`);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="sparkles" style="width: 14px; height: 14px;"></i> Stories';
+                }
+                const btnTab = document.getElementById(`btn-gen-stories-tab-${document_id}`);
+                if (btnTab) {
+                    btnTab.disabled = false;
+                    btnTab.innerHTML = '<i data-lucide="sparkles" style="width: 16px; height: 16px; color:#334155; stroke-width: 2;"></i> Stories';
+                }
+                if (window.lucide) lucide.createIcons();
+            }
+            if (milestone_id && state.currentProject) {
+                if (typeof refreshMilestoneViewsForProject === "function") {
+                    refreshMilestoneViewsForProject(state.currentProject.id);
+                }
+            }
         }
     }
 }

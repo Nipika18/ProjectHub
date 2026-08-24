@@ -667,8 +667,8 @@ function syncFiltersToDOM(tabName) {
 document.getElementById("btn-toggle-backlog")?.addEventListener("click", () => {
     localStorage.setItem("stories_view_tab", "backlog");
     document.getElementById("btn-toggle-backlog").classList.add("active");
-    document.getElementById("btn-toggle-backlog").style.color = "#2563eb";
-    document.getElementById("btn-toggle-backlog").style.borderBottom = "2px solid #2563eb";
+    document.getElementById("btn-toggle-backlog").style.color = "var(--color-primary)";
+    document.getElementById("btn-toggle-backlog").style.borderBottom = "2px solid var(--color-primary)";
 
     document.getElementById("btn-toggle-board").classList.remove("active");
     document.getElementById("btn-toggle-board").style.color = "var(--color-text-muted)";
@@ -693,8 +693,8 @@ document.getElementById("btn-toggle-backlog")?.addEventListener("click", () => {
 document.getElementById("btn-toggle-board")?.addEventListener("click", () => {
     localStorage.setItem("stories_view_tab", "board");
     document.getElementById("btn-toggle-board").classList.add("active");
-    document.getElementById("btn-toggle-board").style.color = "#2563eb";
-    document.getElementById("btn-toggle-board").style.borderBottom = "2px solid #2563eb";
+    document.getElementById("btn-toggle-board").style.color = "var(--color-primary)";
+    document.getElementById("btn-toggle-board").style.borderBottom = "2px solid var(--color-primary)";
 
     document.getElementById("btn-toggle-backlog").classList.remove("active");
     document.getElementById("btn-toggle-backlog").style.color = "var(--color-text-muted)";
@@ -719,8 +719,8 @@ document.getElementById("btn-toggle-board")?.addEventListener("click", () => {
 document.getElementById("btn-toggle-list")?.addEventListener("click", () => {
     localStorage.setItem("stories_view_tab", "list");
     document.getElementById("btn-toggle-list").classList.add("active");
-    document.getElementById("btn-toggle-list").style.color = "#2563eb";
-    document.getElementById("btn-toggle-list").style.borderBottom = "2px solid #2563eb";
+    document.getElementById("btn-toggle-list").style.color = "var(--color-primary)";
+    document.getElementById("btn-toggle-list").style.borderBottom = "2px solid var(--color-primary)";
 
     document.getElementById("btn-toggle-backlog").classList.remove("active");
     document.getElementById("btn-toggle-backlog").style.color = "var(--color-text-muted)";
@@ -740,7 +740,7 @@ document.getElementById("btn-toggle-list")?.addEventListener("click", () => {
 
 document.getElementById("filter-all-work")?.addEventListener("click", () => {
     state.storyAssigneeFilter = "all";
-    document.getElementById("filter-all-work").style.background = "#2563eb";
+    document.getElementById("filter-all-work").style.background = "var(--color-primary)";
     document.getElementById("filter-all-work").style.color = "#fff";
     document.getElementById("filter-my-work").style.background = "transparent";
     document.getElementById("filter-my-work").style.color = "var(--color-text-main)";
@@ -749,7 +749,7 @@ document.getElementById("filter-all-work")?.addEventListener("click", () => {
 
 document.getElementById("filter-my-work")?.addEventListener("click", () => {
     state.storyAssigneeFilter = "mine";
-    document.getElementById("filter-my-work").style.background = "#2563eb";
+    document.getElementById("filter-my-work").style.background = "var(--color-primary)";
     document.getElementById("filter-my-work").style.color = "#fff";
     document.getElementById("filter-all-work").style.background = "transparent";
     document.getElementById("filter-all-work").style.color = "var(--color-text-main)";
@@ -881,8 +881,8 @@ async function updateMilestoneField(projectId, milestoneId, field, value, elemen
             // update styling if element is provided or by ID
             let targetEl = element || document.getElementById(`milestone-status-select-${milestoneId}`);
             if (targetEl && field === 'status') {
-                targetEl.style.background = value === 'completed' ? '#DCFCE7' : 'rgba(59, 130, 246, 0.15)';
-                targetEl.style.color = value === 'completed' ? '#15803D' : '#2563eb';
+                targetEl.style.background = value === 'completed' ? '#DCFCE7' : 'var(--color-primary-glow)';
+                targetEl.style.color = value === 'completed' ? '#15803D' : 'var(--color-primary)';
                 targetEl.value = value;
             }
 
@@ -932,6 +932,10 @@ async function loadStories() {
     }
 
     try {
+        if (typeof window.syncActiveGenerations === "function") {
+            await window.syncActiveGenerations(projectId);
+        }
+
         const [storiesRes, teamRes, msRes] = await Promise.all([
             fetch(`${API_BASE}/api/projects/${projectId}/stories`, {
                 headers: { "Authorization": `Bearer ${state.token}` }
@@ -1091,22 +1095,22 @@ function applyStoriesFilters() {
         itemHTML.innerHTML = `
             <div style="display: flex; align-items: flex-start; gap: 12px; margin-right: 15px; flex-grow: 1; flex-direction: column;">
                 <div style="display: flex; align-items: flex-start; gap: 8px;">
-                    <div style="margin-top: 2px;"><i data-lucide="${isOnHold ? 'pause-circle' : 'bookmark'}" style="color: ${isOnHold ? '#d97706' : '#2563eb'}; width: 18px; height: 18px; flex-shrink: 0;"></i></div>
-                    <span style="font-weight: 700; font-family: monospace; color: #2563EB; font-size: 0.85rem; text-decoration: underline; flex-shrink: 0; margin-top: 1px;">${storyKey}</span>
+                    <div style="margin-top: 2px;"><i data-lucide="${isOnHold ? 'pause-circle' : 'bookmark'}" style="color: ${isOnHold ? '#d97706' : 'var(--color-primary)'}; width: 18px; height: 18px; flex-shrink: 0;"></i></div>
+                    <span style="font-weight: 700; font-family: monospace; color: var(--color-primary); font-size: 0.85rem; text-decoration: underline; flex-shrink: 0; margin-top: 1px;">${storyKey}</span>
                     <span style="font-weight: 500; font-size: 0.95rem; color: var(--color-text-main); line-height: 1.4;">${story.title}</span>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center; margin-left: 26px; margin-top: 4px; flex-wrap: wrap;">
                     <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; background: rgba(16, 185, 129, 0.1); color: #059669; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="flag" style="width:10px;height:10px;"></i> ${milestoneName}</span>
                     <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; background: rgba(107, 114, 128, 0.1); color: var(--color-text-muted);">${story.story_points || 1} SP</span>
-                    <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; background: ${story.priority === 'Critical' || story.priority === 'High' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)'}; color: ${story.priority === 'Critical' || story.priority === 'High' ? '#ef4444' : '#2563eb'};">${story.priority || 'Medium'}</span>
+                    <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; background: ${story.priority === 'Critical' || story.priority === 'High' ? 'rgba(239, 68, 68, 0.1)' : 'var(--color-primary-glow)'}; color: ${story.priority === 'Critical' || story.priority === 'High' ? '#ef4444' : 'var(--color-primary)'};">${story.priority || 'Medium'}</span>
                     ${isOnHold ? `<span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; background: #FEF3C7; color: #D97706; display: inline-flex; align-items: center; gap: 3px;"><i data-lucide="pause-circle" style="width:11px;height:11px;"></i> ON HOLD</span>` : ''}
                 </div>
             </div>
-            <span style="font-size: 0.75rem; background: ${isOnHold ? '#FEF3C7' : 'rgba(59, 130, 246, 0.15)'}; color: ${isOnHold ? '#D97706' : '#2563eb'}; padding: 4px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; flex-shrink: 0;">${isOnHold ? 'On Hold' : story.status}</span>
+            <span style="font-size: 0.75rem; background: ${isOnHold ? '#FEF3C7' : 'var(--color-primary-glow)'}; color: ${isOnHold ? '#D97706' : 'var(--color-primary)'}; padding: 4px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; flex-shrink: 0;">${isOnHold ? 'On Hold' : story.status}</span>
         `;
 
         if (story.id === state.selectedStoryId) {
-            itemHTML.style.borderLeft = "4px solid #2563eb";
+            itemHTML.style.borderLeft = "4px solid var(--color-primary)";
             itemHTML.style.background = "#F1F5F9";
             itemHTML.onmouseout = null;
         }
@@ -1118,7 +1122,7 @@ function applyStoriesFilters() {
                 c.style.background = "var(--bg-card)";
                 c.onmouseout = () => c.style.background = "var(--bg-card)";
             });
-            itemHTML.style.borderLeft = "4px solid #2563eb";
+            itemHTML.style.borderLeft = "4px solid var(--color-primary)";
             itemHTML.style.background = "#F1F5F9";
             itemHTML.onmouseout = null; // keep highlight
 
@@ -1427,7 +1431,7 @@ function renderStoryDetail(projectId, story) {
                 <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #E0F2FE; color: #0284C7; border-radius: 6px;" title="User Story">
                     <i data-lucide="bookmark" style="width: 16px; height: 16px; fill: currentColor;"></i>
                 </span>
-                <span style="font-size: 0.95rem; font-weight: 700; color: #2563EB; font-family: monospace; letter-spacing: 0.4px;">
+                <span style="font-size: 0.95rem; font-weight: 700; color: var(--color-primary); font-family: monospace; letter-spacing: 0.4px;">
                     ${formatStoryKey(story, projectId)}
                 </span>
                 ${isOnHold ? '<span style="background: #FEF3C7; color: #D97706; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; border: 1px solid #FCD34D;">ON HOLD</span>' : ''}
@@ -1932,8 +1936,8 @@ function renderBoardList(storiesList) {
         const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
         // Priority color style
-        let priorityColor = "#2563eb";
-        let priorityBg = "rgba(59, 130, 246, 0.1)";
+        let priorityColor = "var(--color-primary)";
+        let priorityBg = "var(--color-primary-glow)";
         if (story.priority === "Critical" || story.priority === "High") {
             priorityColor = "#ef4444";
             priorityBg = "rgba(239, 68, 68, 0.1)";
@@ -1948,10 +1952,10 @@ function renderBoardList(storiesList) {
 
         card.innerHTML = `
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                <span onclick="openStoryDetailModal(${projectId}, ${story.id})" style="font-weight: 700; font-family: monospace; color: #2563EB; font-size: 0.78rem; text-decoration: underline; cursor: pointer;">${bStoryKey}</span>
+                <span onclick="openStoryDetailModal(${projectId}, ${story.id})" style="font-weight: 700; font-family: monospace; color: var(--color-primary); font-size: 0.78rem; text-decoration: underline; cursor: pointer;">${bStoryKey}</span>
                 ${milestoneBadge}
             </div>
-            <div onclick="openStoryDetailModal(${projectId}, ${story.id})" style="font-weight: 600; font-size: 0.9rem; color: var(--color-text-main); line-height: 1.4; cursor: pointer; transition: color 0.15s;" onmouseover="this.style.color='#2563EB'" onmouseout="this.style.color='var(--color-text-main)'">${story.title}</div>
+            <div onclick="openStoryDetailModal(${projectId}, ${story.id})" style="font-weight: 600; font-size: 0.9rem; color: var(--color-text-main); line-height: 1.4; cursor: pointer; transition: color 0.15s;" onmouseover="this.style.color='var(--color-primary)'" onmouseout="this.style.color='var(--color-text-main)'">${story.title}</div>
             
             <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
                 <div style="display: flex; gap: 6px; align-items: center;">
@@ -2177,7 +2181,7 @@ function renderStoriesListView(storiesList, projectId) {
                         <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: #EDE9FE; color: #7C3AED; border-radius: 3px;" title="Epic / Story">
                             <i data-lucide="zap" style="width: 12px; height: 12px; fill: currentColor;"></i>
                         </span>
-                        <span onclick="openStoryDetailModal(${projectId}, ${story.id})" style="color: #2563EB; font-weight: 700; font-family: monospace; text-decoration: underline; cursor: pointer; font-size: 0.82rem;">
+                        <span onclick="openStoryDetailModal(${projectId}, ${story.id})" style="color: var(--color-primary); font-weight: 700; font-family: monospace; text-decoration: underline; cursor: pointer; font-size: 0.82rem;">
                             ${storyKey}
                         </span>
                         <span onclick="enableInlineTitleEdit(${story.id}, ${projectId}, this)" style="font-weight: 600; color: var(--color-text-main); cursor: text; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 220px; padding: 2px 4px; border-radius: 4px;" title="Click to edit" onmouseover="this.style.background='var(--bg-base)'" onmouseout="this.style.background='transparent'">
@@ -2195,8 +2199,8 @@ function renderStoriesListView(storiesList, projectId) {
                 <!-- Assignee -->
                 <td style="padding: 10px 14px;">
                     <div style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; border-radius: 50%; background: ${assigneeName ? '#10B981' : '#E2E8F0'}; color: ${assigneeName ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700;">
-                            ${assigneeName ? assigneeInitial : '<i data-lucide="user" style="width: 12px; height: 12px;"></i>'}
+                        <span style="width: 20px; height: 20px; border-radius: 50%; background: ${assigneeName && assigneeName !== 'Unassigned' ? '#10B981' : '#E2E8F0'}; color: ${assigneeName && assigneeName !== 'Unassigned' ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700;">
+                            ${assigneeName && assigneeName !== 'Unassigned' ? assigneeInitial : '<i data-lucide="user" style="width: 12px; height: 12px;"></i>'}
                         </span>
                         <div ${isAdmin ? `onclick="openInlineUserPicker(event, 'assignee', ${story.id}, null, ${projectId}, true)"` : ''} style="background: transparent; border: none; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; cursor: ${isAdmin ? 'pointer' : 'default'}; outline: none; padding: 2px 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: space-between; min-width: 110px;" onmouseover="if(${isAdmin}) this.style.background='var(--bg-base)'" onmouseout="if(${isAdmin}) this.style.background='transparent'">
                             <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${assigneeName || 'Unassigned'}</span>
@@ -2208,8 +2212,8 @@ function renderStoriesListView(storiesList, projectId) {
                 <!-- Reporter -->
                 <td style="padding: 10px 14px;">
                     <div style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; border-radius: 50%; background: #2563EB; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700;">
-                            ${reporterInitial}
+                        <span style="width: 20px; height: 20px; border-radius: 50%; background: ${reporterName && reporterName !== 'Unassigned' ? 'var(--color-primary)' : '#E2E8F0'}; color: ${reporterName && reporterName !== 'Unassigned' ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700;">
+                            ${reporterName && reporterName !== 'Unassigned' ? reporterInitial : '<i data-lucide="user" style="width: 12px; height: 12px;"></i>'}
                         </span>
                         <div ${isAdmin ? `onclick="openInlineUserPicker(event, 'reporter', ${story.id}, null, ${projectId}, true)"` : ''} style="background: transparent; border: none; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; cursor: ${isAdmin ? 'pointer' : 'default'}; outline: none; padding: 2px 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: space-between; min-width: 110px;" onmouseover="if(${isAdmin}) this.style.background='var(--bg-base)'" onmouseout="if(${isAdmin}) this.style.background='transparent'">
                             <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${reporterName || 'Unassigned'}</span>
@@ -2313,7 +2317,7 @@ function renderStoriesListView(storiesList, projectId) {
                                 <span style="display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; background: #E0F2FE; color: #0284C7; border-radius: 3px;" title="Subtask">
                                     <i data-lucide="check-square" style="width: 11px; height: 11px;"></i>
                                 </span>
-                                <span onclick="openStoryDetailModal(${projectId}, ${story.id})" style="color: #2563EB; font-weight: 700; font-family: monospace; text-decoration: underline; cursor: pointer; font-size: 0.8rem;">
+                                <span onclick="openStoryDetailModal(${projectId}, ${story.id})" style="color: var(--color-primary); font-weight: 700; font-family: monospace; text-decoration: underline; cursor: pointer; font-size: 0.8rem;">
                                     ${taskKey}
                                 </span>
                                 <span onclick="openStoryDetailModal(${projectId}, ${story.id})" style="font-weight: 500; color: var(--color-text-main); cursor: pointer; font-size: 0.88rem;">
@@ -2328,8 +2332,8 @@ function renderStoriesListView(storiesList, projectId) {
                         <!-- Assignee Dropdown -->
                         <td style="padding: 8px 14px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <span style="width: 20px; height: 20px; border-radius: 50%; background: ${explicitAssignee ? '#10B981' : '#E2E8F0'}; color: ${explicitAssignee ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700;">
-                                    ${explicitAssignee ? initial : '<i data-lucide="user" style="width: 11px; height: 11px;"></i>'}
+                                <span style="width: 20px; height: 20px; border-radius: 50%; background: ${explicitAssignee && explicitAssignee !== 'Unassigned' ? '#10B981' : '#E2E8F0'}; color: ${explicitAssignee && explicitAssignee !== 'Unassigned' ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700;">
+                                    ${explicitAssignee && explicitAssignee !== 'Unassigned' ? initial : '<i data-lucide="user" style="width: 11px; height: 11px;"></i>'}
                                 </span>
                                 <div ${isAdmin ? `onclick="openInlineUserPicker(event, 'assignee', ${story.id}, ${t.id}, ${projectId}, true)"` : ''} style="background: transparent; border: none; font-size: 0.84rem; color: var(--color-text-main); font-weight: 500; cursor: ${isAdmin ? 'pointer' : 'default'}; outline: none; padding: 2px 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: space-between; min-width: 110px;" onmouseover="if(${isAdmin}) this.style.background='var(--bg-base)'" onmouseout="if(${isAdmin}) this.style.background='transparent'">
                                     <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${assigneeName || 'Unassigned'}</span>
@@ -2341,8 +2345,8 @@ function renderStoriesListView(storiesList, projectId) {
                         <!-- Reporter -->
                         <td style="padding: 8px 14px;">
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <span style="width: 20px; height: 20px; border-radius: 50%; background: #2563EB; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700;">
-                                    ${tReporterInitial}
+                                <span style="width: 20px; height: 20px; border-radius: 50%; background: ${tReporterName && tReporterName !== 'Unassigned' ? 'var(--color-primary)' : '#E2E8F0'}; color: ${tReporterName && tReporterName !== 'Unassigned' ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700;">
+                                    ${tReporterName && tReporterName !== 'Unassigned' ? tReporterInitial : '<i data-lucide="user" style="width: 12px; height: 12px;"></i>'}
                                 </span>
                                 <div ${isAdmin ? `onclick="openInlineUserPicker(event, 'reporter', ${story.id}, ${t.id}, ${projectId}, true)"` : ''} style="background: transparent; border: none; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; cursor: ${isAdmin ? 'pointer' : 'default'}; outline: none; padding: 2px 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: space-between; min-width: 110px;" onmouseover="if(${isAdmin}) this.style.background='var(--bg-base)'" onmouseout="if(${isAdmin}) this.style.background='transparent'">
                                     <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${tReporterName || 'Unassigned'}</span>
@@ -2419,7 +2423,7 @@ function renderStoriesListView(storiesList, projectId) {
                     <i data-lucide="milestone" style="width: 16px; margin-right: 8px; color: #64748b;"></i>
                     <span style="color: #6366f1; font-weight: 700; margin-right: 8px; white-space: nowrap;">${escapeHTML(ms.title)}</span>
                     <span style="font-size: 0.8rem; background: #e2e8f0; padding: 2px 8px; border-radius: 12px; font-weight: 500; white-space: nowrap; margin-right: 6px;">${msData.stories.length} Stories</span>
-                    <button onclick="event.stopPropagation(); window.openInlineStoryCreate(${ms.id}, event)" style="background: none; border: none; cursor: pointer; color: var(--color-text-muted); padding: 4px; border-radius: 4px; display: inline-flex; align-items: center; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#2563eb'" onmouseout="this.style.background='none'; this.style.color='var(--color-text-muted)'" title="Create story in this milestone">
+                    <button onclick="event.stopPropagation(); window.openInlineStoryCreate(${ms.id}, event)" style="background: none; border: none; cursor: pointer; color: var(--color-text-muted); padding: 4px; border-radius: 4px; display: inline-flex; align-items: center; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='var(--color-primary)'" onmouseout="this.style.background='none'; this.style.color='var(--color-text-muted)'" title="Create story in this milestone">
                         <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
                     </button>
                 </div>
@@ -2439,7 +2443,7 @@ function renderStoriesListView(storiesList, projectId) {
             <!-- Reporter -->
             <td style="padding: 12px 16px;">
                 <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="width: 20px; height: 20px; border-radius: 50%; background: ${reporterName !== 'Unassigned' ? '#2563EB' : '#E2E8F0'}; color: ${reporterName !== 'Unassigned' ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700;">
+                    <span style="width: 20px; height: 20px; border-radius: 50%; background: ${reporterName !== 'Unassigned' ? 'var(--color-primary)' : '#E2E8F0'}; color: ${reporterName !== 'Unassigned' ? '#fff' : '#475569'}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700;">
                         ${reporterName !== 'Unassigned' ? reporterInitial : '<i data-lucide="user" style="width: 12px; height: 12px;"></i>'}
                     </span>
                     <div ${isAdmin ? `onclick="openInlineUserPicker(event, 'reporter', ${ms.id}, null, ${state.globalProjectId}, true, true)"` : ''} style="background: transparent; border: none; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; cursor: ${isAdmin ? 'pointer' : 'default'}; outline: none; padding: 2px 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: space-between; min-width: 110px;" onmouseover="if(${isAdmin}) this.style.background='var(--bg-base)'" onmouseout="if(${isAdmin}) this.style.background='transparent'">
@@ -2462,7 +2466,7 @@ function renderStoriesListView(storiesList, projectId) {
                 </div>
             </td>
             <td style="padding: 12px 16px;" onclick="event.stopPropagation()">
-                <select id="milestone-status-select-${ms.id}" onchange="updateMilestoneField(${state.globalProjectId}, ${ms.id}, 'status', this.value, this)" style="background: ${ms.status === 'completed' ? '#DCFCE7' : 'rgba(59, 130, 246, 0.15)'}; color: ${ms.status === 'completed' ? '#15803D' : '#2563eb'}; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; cursor: pointer; outline: none;">
+                <select id="milestone-status-select-${ms.id}" onchange="updateMilestoneField(${state.globalProjectId}, ${ms.id}, 'status', this.value, this)" style="background: ${ms.status === 'completed' ? '#DCFCE7' : 'var(--color-primary-glow)'}; color: ${ms.status === 'completed' ? '#15803D' : 'var(--color-primary)'}; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; cursor: pointer; outline: none;">
                     <option value="pending" ${ms.status === 'pending' ? 'selected' : ''}>IN PROGRESS</option>
                     <option value="completed" ${ms.status === 'completed' ? 'selected' : ''}>COMPLETED</option>
                 </select>
@@ -2484,7 +2488,7 @@ function renderStoriesListView(storiesList, projectId) {
                     <i data-lucide="inbox" style="width: 16px; margin-right: 8px; color: #64748b;"></i>
                     <span style="font-weight: 700; margin-right: 8px; white-space: nowrap;">Unassigned / Backlog</span>
                     <span style="font-size: 0.8rem; background: #e2e8f0; padding: 2px 8px; border-radius: 12px; font-weight: 500; white-space: nowrap; margin-right: 6px;">${unassigned.length} Stories</span>
-                    <button onclick="event.stopPropagation(); window.openInlineStoryCreate('unassigned', event)" style="background: none; border: none; cursor: pointer; color: var(--color-text-muted); padding: 4px; border-radius: 4px; display: inline-flex; align-items: center; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='#2563eb'" onmouseout="this.style.background='none'; this.style.color='var(--color-text-muted)'" title="Create unassigned story">
+                    <button onclick="event.stopPropagation(); window.openInlineStoryCreate('unassigned', event)" style="background: none; border: none; cursor: pointer; color: var(--color-text-muted); padding: 4px; border-radius: 4px; display: inline-flex; align-items: center; transition: all 0.2s;" onmouseover="this.style.background='#e2e8f0'; this.style.color='var(--color-primary)'" onmouseout="this.style.background='none'; this.style.color='var(--color-text-muted)'" title="Create unassigned story">
                         <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
                     </button>
                 </div>
@@ -2743,7 +2747,7 @@ window.openInlineStoryCreate = function(milestoneId, event) {
     
     input.addEventListener('input', () => {
         if (input.value.trim().length > 0) {
-            saveBtn.style.background = '#2563eb';
+            saveBtn.style.background = 'var(--color-primary)';
             saveBtn.style.color = '#fff';
             saveBtn.querySelector('span').style.background = 'rgba(255,255,255,0.2)';
         } else {
@@ -2911,7 +2915,7 @@ window.openInlineUserPicker = function (event, roleType, storyId, taskId, projec
             optDiv.onmouseover = () => { optDiv.style.background = 'var(--bg-base)'; };
             optDiv.onmouseout = () => { optDiv.style.background = 'transparent'; };
 
-            const avatarBg = o.value !== "" ? (roleType === 'assignee' ? '#10B981' : '#2563EB') : '#E2E8F0';
+            const avatarBg = o.value !== "" ? (roleType === 'assignee' ? '#10B981' : 'var(--color-primary)') : '#E2E8F0';
             const avatarColor = o.value !== "" ? '#fff' : '#475569';
 
             const avatarHtml = `<span style="width: 20px; height: 20px; border-radius: 50%; background: ${avatarBg}; color: ${avatarColor}; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; flex-shrink: 0;">

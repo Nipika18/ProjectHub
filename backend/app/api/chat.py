@@ -80,6 +80,7 @@ def chat_with_project(
                 "project_id": request.project_id,
                 "project_name": project_name,
                 "milestone_id": request.milestone_id,
+                "document_id": request.document_id,
                 "category": request.category,
                 "user_message": request.message,
                 "history": history_records,

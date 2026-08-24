@@ -95,7 +95,7 @@ async function loadMyTasks() {
 }
 
 function createMyTaskCard(task) {
-    let typeColor = '#2563eb';
+    let typeColor = 'var(--color-primary)';
     if (task.task_type === 'Frontend') typeColor = '#f59e0b';
     else if (task.task_type === 'AI') typeColor = '#10b981';
     else if (task.task_type === 'Manager') typeColor = '#8b5cf6';
@@ -139,7 +139,7 @@ function createMyTaskCard(task) {
     });
 
     card.innerHTML = `
-        <div onclick="openStoryDetailModal(${task.project_id}, ${task.story_id})" style="font-weight: 600; font-size: 0.95rem; color: var(--color-text-main); cursor: pointer; transition: color 0.15s;" onmouseover="this.style.color='#2563EB'" onmouseout="this.style.color='var(--color-text-main)'">${task.title}</div>
+        <div onclick="openStoryDetailModal(${task.project_id}, ${task.story_id})" style="font-weight: 600; font-size: 0.95rem; color: var(--color-text-main); cursor: pointer; transition: color 0.15s;" onmouseover="this.style.color='var(--color-primary)'" onmouseout="this.style.color='var(--color-text-main)'">${task.title}</div>
         <div style="font-size: 0.8rem; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px;">
             <i data-lucide="bookmark" style="width: 12px; height: 12px;"></i>
             ${task.story_title.length > 50 ? task.story_title.substring(0, 47) + '...' : task.story_title}
@@ -152,7 +152,7 @@ function createMyTaskCard(task) {
                     ${task.milestone_title ? escapeHTML(task.milestone_title.length > 20 ? task.milestone_title.substring(0, 18) + '...' : task.milestone_title) : 'Global Project'}
                 </span>
             </div>
-            <span onclick="openStoryDetailModal(${task.project_id}, ${task.story_id})" style="font-family: monospace; font-size: 0.75rem; font-weight: 700; color: #2563EB; text-decoration: underline; cursor: pointer;">${getProjectKeyPrefix(task.project_id)}-${task.story_seq || task.story_id}-${task.task_seq || task.id}</span>
+            <span onclick="openStoryDetailModal(${task.project_id}, ${task.story_id})" style="font-family: monospace; font-size: 0.75rem; font-weight: 700; color: var(--color-primary); text-decoration: underline; cursor: pointer;">${getProjectKeyPrefix(task.project_id)}-${task.story_seq || task.story_id}-${task.task_seq || task.id}</span>
         </div>
         <div style="margin-top: 4px;">
             <select onchange="updateMyTaskStatus(${task.project_id}, ${task.story_id}, ${task.id}, this.value)" 

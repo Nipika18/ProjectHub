@@ -232,6 +232,10 @@ async function loadMilestonesRoadmap() {
     }
 
     try {
+        if (typeof window.syncActiveGenerations === "function") {
+            await window.syncActiveGenerations(filterVal);
+        }
+
         const [milestonesRes, docs, storiesRes] = await Promise.all([
             fetch(`${API_BASE}/api/milestones/project/${filterVal}`, {
                 headers: { "Authorization": `Bearer ${state.token}` }

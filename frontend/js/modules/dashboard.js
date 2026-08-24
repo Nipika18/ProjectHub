@@ -181,31 +181,66 @@ function bindSidebarEvents() {
         });
     }
 
-    // Sidebar Mini Icon Rail Toggle
+    // Sidebar Responsive & Mini Icon Rail Toggle
     const btnCloseSidebar = document.getElementById("btn-sidebar-close");
     const btnOpenSidebar = document.getElementById("btn-sidebar-open");
+    const btnMobileMenuToggle = document.getElementById("btn-mobile-menu-toggle");
+    const sidebarOverlay = document.getElementById("sidebar-overlay");
     const appContainer = document.getElementById("app-container");
 
-    if (btnCloseSidebar && appContainer) {
+    const closeMobileSidebar = () => {
+        if (appContainer) appContainer.classList.remove("sidebar-mobile-open");
+    };
+
+    if (appContainer) {
         if (localStorage.getItem("sidebar_collapsed") === "true") {
             appContainer.classList.add("sidebar-collapsed");
-            btnCloseSidebar.setAttribute("title", "Expand sidebar");
+            if (btnCloseSidebar) btnCloseSidebar.setAttribute("title", "Expand sidebar");
         }
 
-        btnCloseSidebar.addEventListener("click", () => {
-            appContainer.classList.toggle("sidebar-collapsed");
-            const isCollapsed = appContainer.classList.contains("sidebar-collapsed");
-            localStorage.setItem("sidebar_collapsed", isCollapsed ? "true" : "false");
-            btnCloseSidebar.setAttribute("title", isCollapsed ? "Expand sidebar" : "Close sidebar");
-        });
+        if (btnCloseSidebar) {
+            btnCloseSidebar.addEventListener("click", () => {
+                if (window.innerWidth <= 1024) {
+                    closeMobileSidebar();
+                } else {
+                    appContainer.classList.toggle("sidebar-collapsed");
+                    const isCollapsed = appContainer.classList.contains("sidebar-collapsed");
+                    localStorage.setItem("sidebar_collapsed", isCollapsed ? "true" : "false");
+                    btnCloseSidebar.setAttribute("title", isCollapsed ? "Expand sidebar" : "Close sidebar");
+                }
+            });
+        }
 
         if (btnOpenSidebar) {
             btnOpenSidebar.addEventListener("click", () => {
-                appContainer.classList.remove("sidebar-collapsed");
-                localStorage.setItem("sidebar_collapsed", "false");
-                btnCloseSidebar.setAttribute("title", "Close sidebar");
+                if (window.innerWidth <= 1024) {
+                    appContainer.classList.add("sidebar-mobile-open");
+                } else {
+                    appContainer.classList.remove("sidebar-collapsed");
+                    localStorage.setItem("sidebar_collapsed", "false");
+                    if (btnCloseSidebar) btnCloseSidebar.setAttribute("title", "Close sidebar");
+                }
             });
         }
+
+        if (btnMobileMenuToggle) {
+            btnMobileMenuToggle.addEventListener("click", () => {
+                appContainer.classList.toggle("sidebar-mobile-open");
+            });
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener("click", closeMobileSidebar);
+        }
+
+        // Auto close mobile drawer when nav links are clicked
+        document.querySelectorAll(".sidebar-nav .nav-item").forEach(item => {
+            item.addEventListener("click", () => {
+                if (window.innerWidth <= 1024) {
+                    closeMobileSidebar();
+                }
+            });
+        });
     }
 }
 

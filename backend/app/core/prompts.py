@@ -26,7 +26,8 @@ def get_global_stories_prompt(context_text: str, existing_titles_prompt: str, av
     DEDUPLICATION REQUIREMENT:
     The following user stories ALREADY EXIST in this project:
     {existing_titles_prompt}
-    You MUST NOT generate any stories that duplicate or repeat features already covered in the list above. Only generate strictly NEW, complementary requirements!
+    You MUST NOT generate any stories that duplicate or repeat features already covered in the list above. 
+    IMPORTANT: If all features from the document are already covered by the existing stories, you MUST return an empty array `[]` for "stories". Do not force the creation of new stories if they are conceptually duplicates! Only generate strictly NEW, complementary requirements!
     If a new user story depends on or relates to one of the existing stories listed above, explicitly mention the existing story title in the description (e.g. "Builds upon [Existing Story Title]").
     
     DOCUMENT CONTEXT:
@@ -77,7 +78,8 @@ def get_single_document_stories_prompt(doc_name: str, context_text: str, existin
     DEDUPLICATION REQUIREMENT:
     The following user stories ALREADY EXIST in this project:
     {existing_titles_prompt}
-    You MUST NOT generate any stories that duplicate or repeat features already covered in the list above. Only generate strictly NEW, complementary requirements!
+    You MUST NOT generate any stories that duplicate or repeat features already covered in the list above. 
+    IMPORTANT: If all features from the document are already covered by the existing stories, you MUST return an empty array `[]` for "stories". Do not force the creation of new stories if they are conceptually duplicates! Only generate strictly NEW, complementary requirements!
     If a new user story depends on or relates to one of the existing stories listed above, explicitly mention the existing story title in the description (e.g. "Builds upon [Existing Story Title]").
     
     DOCUMENT: {doc_name}

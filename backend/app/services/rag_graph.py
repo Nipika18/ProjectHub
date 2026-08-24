@@ -34,6 +34,7 @@ class RAGGraphState(TypedDict, total=False):
     project_id: int
     project_name: str
     milestone_id: Optional[int]
+    document_id: Optional[int]
     category: Optional[str]
     user_message: str
     history: List[Any]
@@ -79,6 +80,7 @@ def retrieve_chunks_node(state: RAGGraphState) -> Dict[str, Any]:
     project_id = state.get("project_id")
     search_query = state.get("search_query", state.get("user_message", ""))
     milestone_id = state.get("milestone_id")
+    document_id = state.get("document_id")
     category = state.get("category")
 
     chunks = []
@@ -89,6 +91,7 @@ def retrieve_chunks_node(state: RAGGraphState) -> Dict[str, Any]:
                 project_id=project_id,
                 query_text=search_query,
                 milestone_id=milestone_id,
+                document_id=document_id,
                 category=category,
                 top_k=5
             )

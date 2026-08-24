@@ -17,6 +17,7 @@ const state = {
     milestoneChatContext: null, // { projectId, milestoneId, milestoneTitle, hasDocs }
     stories: [],
     activeGenerations: {}, // Track document ID -> boolean for active story generations
+    activeMilestoneGenerations: {}, // Track milestone ID -> boolean for active story generations
     activeProjectTab: localStorage.getItem("activeProjectTab") || "milestones"
 };
 

@@ -304,6 +304,153 @@ h4 {
     text-overflow: ellipsis;
 }
 
+/* User Account Menu Popover Card */
+.user-account-menu {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    width: 100%;
+    min-width: 200px;
+    padding: 0;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+    z-index: 1000;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+}
+
+.account-menu-header {
+    padding: 12px 16px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.account-menu-divider {
+    height: 1px;
+    background: #e2e8f0;
+    width: 100%;
+    margin-bottom: 4px;
+}
+
+.account-menu-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #0f172a;
+    font-size: 0.88rem;
+    font-weight: 500;
+    text-align: left;
+    transition: background 0.15s ease;
+}
+
+.account-menu-item:hover {
+    background: #f1f5f9;
+}
+
+/* Mobile Header Bar & Overlay Backdrop */
+.mobile-header-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    padding: 0 16px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    width: 100%;
+}
+
+.mobile-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-mobile-toggle {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-mobile-toggle:hover {
+    background: #e0f2fe;
+    color: #0284c7;
+    border-color: #bae6fd;
+}
+
+.mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mobile-brand-logo {
+    height: 28px;
+    width: 28px;
+    object-fit: contain;
+}
+
+.mobile-brand-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.mobile-project-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(14, 165, 233, 0.1);
+    color: var(--color-primary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    max-width: 160px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-mobile-open .sidebar-overlay,
+.app-layout.sidebar-mobile-open .sidebar-overlay {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
 /* =====================================================================
    Collapsed Mini Rail Sidebar State (Ultra-Clean Icon Rail)
    ===================================================================== */
@@ -318,7 +465,7 @@ h4 {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: space-between !important;
-    overflow-x: hidden !important;
+    overflow: visible !important;
     opacity: 1 !important;
     pointer-events: auto !important;
     border-right: 1px solid #e2e8f0 !important;
@@ -487,7 +634,7 @@ h4 {
 }
 
 /* Sibling display control */
-.app-layout.sidebar-collapsed #sidebar-avatar-img:not([style*="display: none"]) ~ #user-avatar-char {
+.app-layout.sidebar-collapsed #sidebar-avatar-img:not([style*="display: none"]):not([style*="display:none"]) ~ #user-avatar-char {
     display: none !important;
 }
 
@@ -499,9 +646,19 @@ h4 {
     display: none !important;
 }
 
-.app-layout.sidebar-collapsed .main-content {
-    padding-left: 0 !important;
+.app-layout.sidebar-collapsed .user-account-menu {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: calc(100% + 12px) !important;
+    width: 220px !important;
+    min-width: 220px !important;
+    z-index: 1000 !important;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18) !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
 }
+
 
 /* Floating Hover Tooltip strictly for Collapsed Icon Rail */
 .app-layout.sidebar-collapsed .nav-item,
@@ -578,6 +735,8 @@ h4 {
     overflow-x: hidden;
     white-space: nowrap;
     transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, border-color 0.3s ease;
+    position: relative;
+    z-index: 100;
 }
 
 .sidebar-brand {
@@ -1836,7 +1995,7 @@ h4 {
 }
 
 .file-type-badge.docx {
-    background: rgba(59, 130, 246, 0.15);
+    background: var(--color-primary-glow);
     color: #3B82F6;
 }
 
@@ -2724,7 +2883,7 @@ h4 {
 }
 
 .auth-brand-top h2 span {
-    color: #1A56DB;
+    color: var(--color-primary);
     margin-left: 4px;
 }
 
@@ -2769,7 +2928,7 @@ h4 {
 }
 
 .form-group-new input:focus {
-    border-color: #1A56DB;
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
 }
 
@@ -2799,7 +2958,7 @@ h4 {
 
 .forgot-link-new {
     font-size: 14px;
-    color: #1A56DB;
+    color: var(--color-primary);
     font-weight: 600;
 }
 
@@ -2808,7 +2967,7 @@ h4 {
 }
 
 .btn-blue {
-    background: #1A56DB;
+    background: var(--color-primary);
     color: #ffffff;
     font-weight: 500;
     padding: 12px;
@@ -2816,7 +2975,7 @@ h4 {
 }
 
 .btn-blue:hover {
-    background: #1e40af;
+    background: var(--color-primary-hover);
 }
 
 .btn-social-new {
@@ -2845,7 +3004,7 @@ h4 {
 }
 
 .auth-bottom-text span.link-btn {
-    color: #1A56DB;
+    color: var(--color-primary);
     font-weight: 600;
     cursor: pointer;
 }
@@ -2856,7 +3015,7 @@ h4 {
 
 .auth-right-visual-panel {
     flex: 1;
-    background: #1A56DB;
+    background: var(--color-primary);
     color: #ffffff;
     padding: 48px 40px;
     display: flex;
@@ -3172,7 +3331,7 @@ h4 {
 /* =====================================================================
    Mobile Responsiveness (@media)
    ===================================================================== */
-@media screen and (max-width: 992px) {
+@media screen and (max-width: 1024px) {
 
     /* Auth Screens */
     .auth-glass.new-split-glass {
@@ -3191,64 +3350,196 @@ h4 {
 
     .auth-right-visual-panel {
         display: none;
-        /* Hide visual panel on mobile to save space */
     }
 
-    /* Main Layout - Top Navigation style for mobile */
-    .app-layout {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        overflow: hidden;
+    /* ── Show the Mobile Header Bar ── */
+    .mobile-header-bar {
+        display: flex !important;
     }
 
-    .sidebar-glass {
-        width: 100%;
-        height: auto;
-        border-right: none;
-        border-bottom: 1px solid var(--border-color);
-        padding: 15px;
-        flex-shrink: 0;
+    /* ── Show overlay layer (starts transparent, toggled by JS class) ── */
+    .sidebar-overlay {
+        display: block !important;
     }
 
-    .sidebar-brand {
-        justify-content: center;
-        padding-bottom: 10px;
+    /* ── App layout: switch from grid to flex column ── */
+    .app-layout,
+    .app-layout.sidebar-collapsed {
+        display: flex !important;
+        flex-direction: column !important;
+        grid-template-columns: none !important;
+        width: 100% !important;
+        height: 100vh !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        position: relative !important;
     }
 
-    .sidebar-nav {
-        flex-direction: row;
-        overflow-x: auto;
-        padding-bottom: 10px;
-        -webkit-overflow-scrolling: touch;
-        gap: 10px;
+    /* ── Sidebar becomes a fixed off-canvas drawer (hidden left) ── */
+    .sidebar-glass,
+    .app-layout.sidebar-collapsed .sidebar-glass {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        width: 280px !important;
+        max-width: 85vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 1001 !important;
+        background: #ffffff !important;
+        border-right: 1px solid var(--border-color) !important;
+        border-bottom: none !important;
+        box-shadow: 8px 0 30px rgba(15, 23, 42, 0.15) !important;
+        transform: translateX(-100%) !important;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        align-items: stretch !important;
+        padding: 20px 16px !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
     }
 
-    .nav-item {
-        flex-direction: column;
-        white-space: nowrap;
-        font-size: 12px;
-        padding: 8px 12px;
-        gap: 6px;
-        border-radius: var(--radius-sm);
+    /* ── When mobile drawer is open, slide sidebar in ── */
+    .app-layout.sidebar-mobile-open .sidebar-glass {
+        transform: translateX(0) !important;
     }
 
-    .nav-item i {
-        margin-bottom: 0;
+    /* ── Undo collapsed rail styles inside mobile drawer ── */
+    .app-layout.sidebar-collapsed .sidebar-brand {
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 8px 12px 24px 12px !important;
+        margin-bottom: 0 !important;
+        border-bottom: none !important;
+        gap: 10px !important;
+        width: 100% !important;
     }
 
-    .sidebar-footer {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        padding-top: 10px;
-        border-top: 1px solid var(--border-color);
+    .app-layout.sidebar-collapsed .sidebar-brand > div {
+        gap: 10px !important;
     }
 
+    .app-layout.sidebar-collapsed .sidebar-brand h2 {
+        display: flex !important;
+    }
+
+    .app-layout.sidebar-collapsed .sidebar-brand img {
+        height: 34px !important;
+        width: 34px !important;
+        margin: 0 !important;
+    }
+
+    .app-layout.sidebar-collapsed #btn-sidebar-close {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 8px !important;
+        background: transparent !important;
+        border: 1px solid transparent !important;
+        margin: 0 !important;
+    }
+
+    .app-layout.sidebar-collapsed #btn-sidebar-close i {
+        transform: none !important;
+    }
+
+    .app-layout.sidebar-collapsed .global-project-selector {
+        display: block !important;
+    }
+
+    .app-layout.sidebar-collapsed .sidebar-nav {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 4px !important;
+        width: 100% !important;
+        padding: 0 !important;
+    }
+
+    .app-layout.sidebar-collapsed .nav-item {
+        justify-content: flex-start !important;
+        width: 100% !important;
+        height: auto !important;
+        padding: 10px 14px !important;
+        border-radius: var(--radius-md) !important;
+        margin: 0 !important;
+    }
+
+    .app-layout.sidebar-collapsed .nav-item span {
+        display: inline !important;
+    }
+
+    .app-layout.sidebar-collapsed .nav-item i {
+        margin-right: 12px !important;
+    }
+
+    .app-layout.sidebar-collapsed .sidebar-footer {
+        width: 100% !important;
+        justify-content: stretch !important;
+        padding: 12px 0 0 0 !important;
+        margin-top: auto !important;
+        border-top: 1px solid #f1f5f9 !important;
+    }
+
+    .app-layout.sidebar-collapsed .user-badge {
+        width: 100% !important;
+        height: auto !important;
+        border-radius: 10px !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 8px 10px !important;
+        background: #ffffff !important;
+        box-shadow: none !important;
+        justify-content: space-between !important;
+    }
+
+    .app-layout.sidebar-collapsed .user-badge-inner {
+        gap: 10px !important;
+    }
+
+    .app-layout.sidebar-collapsed .user-details,
+    .app-layout.sidebar-collapsed .user-badge-more-icon {
+        display: block !important;
+    }
+
+    .app-layout.sidebar-collapsed #sidebar-avatar-img,
+    .app-layout.sidebar-collapsed #user-avatar-char {
+        width: 34px !important;
+        height: 34px !important;
+        border-radius: 8px !important;
+        border: none !important;
+    }
+
+    .app-layout.sidebar-collapsed .user-account-menu {
+        bottom: calc(100% + 8px) !important;
+        left: 0 !important;
+        width: 100% !important;
+        min-width: 200px !important;
+    }
+
+    /* ── Disable the desktop collapsed tooltips on mobile ── */
+    .app-layout.sidebar-collapsed .nav-item[data-tooltip]::after,
+    .app-layout.sidebar-collapsed .nav-item[data-tooltip]::before,
+    .app-layout.sidebar-collapsed .user-badge[data-tooltip]::after,
+    .app-layout.sidebar-collapsed .user-badge[data-tooltip]::before {
+        display: none !important;
+        content: none !important;
+    }
+
+    /* ── Hide the desktop floating open button on mobile ── */
+    .btn-sidebar-open {
+        display: none !important;
+    }
+
+    /* ── Main content takes full width ── */
     .main-content {
-        height: 100%;
-        padding: 20px;
-        overflow-y: auto;
+        flex: 1 !important;
+        padding: 16px !important;
+        width: 100% !important;
+        overflow-y: auto !important;
         -webkit-overflow-scrolling: touch;
     }
 
@@ -3340,7 +3631,7 @@ h4 {
 }
 
 .bg-blue {
-    background-color: #2563eb !important;
+    background-color: var(--color-primary) !important;
 }
 
 .bg-purple {
@@ -3682,4 +3973,63 @@ h4 {
     color: #94a3b8;
     text-align: center;
     font-style: italic;
+}
+
+/* =====================================================================
+   Global Floating AI Assistant Button
+   ===================================================================== */
+@keyframes fab-pulse-glow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 12px rgba(14, 165, 233, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+    }
+}
+
+@keyframes fab-float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-4px); }
+    100% { transform: translateY(0px); }
+}
+
+#global-ai-fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    /* Clean, elegant sky blue gradient */
+    background: linear-gradient(135deg, #38bdf8, #0284c7);
+    color: white;
+    border: none;
+    box-shadow: 0 8px 16px -4px rgba(14, 165, 233, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 999;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    animation: fab-float 3s ease-in-out infinite, fab-pulse-glow 2s infinite;
+}
+
+#global-ai-fab:hover {
+    transform: scale(1.1) translateY(-4px);
+    box-shadow: 0 12px 24px -4px rgba(14, 165, 233, 0.6);
+    animation: none; /* Pause float/pulse on hover */
+}
+
+#global-ai-fab.hidden {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#global-ai-fab i {
+    width: 26px;
+    height: 26px;
 }

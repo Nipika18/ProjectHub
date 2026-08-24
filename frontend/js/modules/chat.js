@@ -16,6 +16,14 @@ function bindMilestoneChatEvents() {
         });
     }
 
+    const btnGlobalFab = document.getElementById("global-ai-fab");
+    if (btnGlobalFab) {
+        btnGlobalFab.addEventListener("click", () => {
+            const projId = state.globalProjectId || state.currentProject?.id || (state.projects && state.projects[0]?.id);
+            openGlobalMilestoneChatModal(projId, null, "Project-wide Docs");
+        });
+    }
+
     if (form) form.addEventListener("submit", executeMilestoneChatQuery);
     if (btnClose && chatModal) {
         btnClose.addEventListener("click", () => {

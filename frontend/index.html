@@ -12,7 +12,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <!-- Style Sheet -->
-    <link rel="stylesheet" href="css/style.css?v=1.2">
+    <link rel="stylesheet" href="css/style.css?v=2.4">
     <!-- Icon Set -->
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -32,7 +32,7 @@
                         style="height: 42px; width: auto; max-height: 42px; object-fit: contain; display: block;">
                     <h2
                         style="font-size: 26px; font-weight: 700; color: #111827; margin: 0; line-height: 1; display: flex; align-items: center;">
-                        Sprint <span style="color: #1A56DB; margin-left: 4px;">AI</span></h2>
+                        Sprint <span style="color: var(--color-primary); margin-left: 4px;">AI</span></h2>
                 </div>
 
                 <!-- Login Form -->
@@ -207,6 +207,26 @@
 
     <!-- Main Application Grid -->
     <div id="app-container" class="app-layout">
+        <!-- Mobile Top Header Bar (Visible on Screens <= 1024px) -->
+        <header class="mobile-header-bar">
+            <div class="mobile-header-left">
+                <button id="btn-mobile-menu-toggle" class="btn-mobile-toggle" aria-label="Open mobile menu" title="Menu">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div class="mobile-brand">
+                    <img src="images/sidebar-logo.png" alt="Sprint AI" class="mobile-brand-logo">
+                    <span class="mobile-brand-title">Sprint <strong>AI</strong></span>
+                </div>
+            </div>
+            <div id="mobile-active-project-badge" class="mobile-project-badge" style="display: none;">
+                <i data-lucide="folder-dot" style="width: 12px; height: 12px;"></i>
+                <span id="mobile-project-name">Project</span>
+            </div>
+        </header>
+
+        <!-- Sidebar Mobile Overlay Backdrop -->
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
         <!-- Sidebar Navigation -->
         <aside class="sidebar-glass">
             <div class="sidebar-brand">
@@ -269,29 +289,24 @@
 
             <div class="sidebar-footer" style="position: relative;">
                 <!-- Popup Menu -->
-                <div id="user-account-menu"
-                    style="display: none; position: absolute; bottom: calc(100% + 8px); left: 0; width: 100%; padding: 0; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); z-index: 100; background: #ffffff; border: 1px solid #e2e8f0;">
-                    <div
-                        style="padding: 12px 16px; font-size: 0.75rem; font-weight: 600; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">
+                <div id="user-account-menu" class="user-account-menu" style="display: none;">
+                    <div class="account-menu-header">
                         Account
                     </div>
-                    <div style="height: 1px; background: #e2e8f0; width: 100%; margin-bottom: 4px;"></div>
+                    <div class="account-menu-divider"></div>
                     <div style="padding: 4px;">
-                        <button class="account-menu-item" id="btn-edit-profile"
-                            style="width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: transparent; border: none; border-radius: 6px; cursor: pointer; color: #0f172a; font-size: 0.9rem; font-weight: 500; text-align: left;">
+                        <button class="account-menu-item" id="btn-edit-profile">
                             <i data-lucide="user" style="width: 16px; height: 16px; color: #0f172a;"></i>
                             Manage Profile
                         </button>
-                        <button class="account-menu-item" id="btn-signout"
-                            style="width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: transparent; border: none; border-radius: 6px; cursor: pointer; color: #ef4444; font-size: 0.9rem; font-weight: 500; text-align: left;">
+                        <button class="account-menu-item" id="btn-signout" style="color: #ef4444;">
                             <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
                             Logout
                         </button>
                     </div>
                 </div>
 
-                <div class="user-badge" id="user-badge-menu-toggle" title="Account & Profile Settings"
-                    data-tooltip="Account Settings">
+                <div class="user-badge" id="user-badge-menu-toggle" data-tooltip="Account Settings">
                     <div class="user-badge-inner">
                         <img id="sidebar-avatar-img" src="" alt="Avatar" style="display:none;">
                         <div class="user-avatar" id="user-avatar-char">U</div>
@@ -307,7 +322,7 @@
 
         <!-- Main Content Area -->
         <main class="main-content">
-            <!-- Floating Sidebar Open Button (When Collapsed) -->
+            <!-- Floating Sidebar Open Button (When Collapsed on Desktop) -->
             <button id="btn-sidebar-open" class="btn-sidebar-open" title="Open sidebar" aria-label="Open sidebar"
                 style="display: none;">
                 <i data-lucide="panel-left"></i>
@@ -315,6 +330,12 @@
 
             <!-- Notification Toast -->
             <div id="toast" class="toast-card"></div>
+            
+            <!-- Global Generating Banner -->
+            <div id="global-generating-banner" class="toast-card info active" style="display: none; top: 20px; right: 50%; transform: translateX(50%); bottom: auto; z-index: 9999; border-left-color: #3b82f6; background: #eff6ff; color: #1e3a8a; border: 1px solid #bfdbfe; font-weight: 600; flex-direction: row; align-items: center;">
+                <i data-lucide="loader" class="spin" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                <span id="global-generating-text">AI is generating stories...</span>
+            </div>
 
             <!-- Notification Bell -->
             <div class="notification-bell-container" id="notif-container" style="display: none;">
@@ -655,10 +676,10 @@
                     style="display: flex; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
                     <div style="display: flex; gap: 15px;">
                         <button class="view-toggle-btn active" id="btn-toggle-backlog"
-                            style="background: transparent; border: none; font-size: 0.95rem; font-weight: 600; color: #2563eb; cursor: pointer; padding: 5px 10px; border-bottom: 2px solid #2563eb; display: flex; align-items: center; gap: 6px;">
+                            style="background: transparent; border: none; font-size: 0.95rem; font-weight: 600; color: var(--color-primary); cursor: pointer; padding: 5px 10px; border-bottom: 2px solid var(--color-primary); display: flex; align-items: center; gap: 6px;">
                             <i data-lucide="list-todo" style="width: 16px; height: 16px;"></i> Backlog <span
                                 id="tab-backlog-count"
-                                style="background: rgba(37, 99, 235, 0.15); color: #2563eb; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: 700; margin-left: 4px;">0</span>
+                                style="background: var(--color-primary-glow); color: var(--color-primary); font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: 700; margin-left: 4px;">0</span>
                         </button>
                         <button class="view-toggle-btn" id="btn-toggle-board"
                             style="background: transparent; border: none; font-size: 0.95rem; font-weight: 600; color: var(--color-text-muted); cursor: pointer; padding: 5px 10px; border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;">
@@ -674,7 +695,7 @@
                     <div class="toggle-my-tasks-bar"
                         style="display: flex; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; padding: 2px;">
                         <button id="filter-all-work" class="filter-assignee-btn active"
-                            style="padding: 6px 12px; border: none; background: #2563eb; color: #fff; font-size: 0.85rem; font-weight: 600; border-radius: 6px; cursor: pointer;">All
+                            style="padding: 6px 12px; border: none; background: var(--color-primary); color: #fff; font-size: 0.85rem; font-weight: 600; border-radius: 6px; cursor: pointer;">All
                             Work</button>
                         <button id="filter-my-work" class="filter-assignee-btn"
                             style="padding: 6px 12px; border: none; background: transparent; color: var(--color-text-main); font-size: 0.85rem; font-weight: 600; border-radius: 6px; cursor: pointer;">Assigned
@@ -708,7 +729,7 @@
                     <div id="jira-selection-bar"
                         style="display: none; align-items: center; gap: 12px; font-size: 0.82rem; font-weight: 600; background: #1E293B; color: #fff; padding: 6px 14px; border-radius: 8px; margin-left: auto; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.08);">
                         <span id="jira-selection-count"
-                            style="background: #2563EB; color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">0</span>
+                            style="background: var(--color-primary); color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">0</span>
                         <span style="color: #94A3B8; font-weight: 600;">selected</span>
                         <span style="color: #475569;">|</span>
                         <button type="button" onclick="jiraListSelectAll()"
@@ -748,7 +769,7 @@
                             style="display: none !important; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 15px;">
                             <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;"><i
                                     data-lucide="list"></i> Backlog <span id="panel-backlog-count"
-                                    style="background: rgba(37, 99, 235, 0.15); color: #2563eb; font-size: 0.8rem; padding: 2px 10px; border-radius: 12px; font-weight: 700;">0</span>
+                                    style="background: var(--color-primary-glow); color: var(--color-primary); font-size: 0.8rem; padding: 2px 10px; border-radius: 12px; font-weight: 700;">0</span>
                             </h3>
                         </div>
                         <div class="backlog-list" id="stories-backlog-list"
@@ -800,7 +821,7 @@
                                 style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; font-size: 0.95rem; color: var(--color-text-main); margin-top: 0; margin-bottom: 5px;">
                                 <span>IN PROGRESS</span>
                                 <span class="badge" id="badge-inprogress-count"
-                                    style="font-size: 0.75rem; background: rgba(59, 130, 246, 0.15); color: #2563eb; padding: 2px 6px; border-radius: 12px;">0</span>
+                                    style="font-size: 0.75rem; background: var(--color-primary-glow); color: var(--color-primary); padding: 2px 6px; border-radius: 12px;">0</span>
                             </h3>
                             <div class="board-cards-container" id="cards-inprogress"
                                 style="flex-grow: 1; display: flex; flex-direction: column; gap: 10px; min-height: 400px;"
@@ -1762,24 +1783,28 @@
             </form>
         </div>
     </div>
+    <!-- Global Floating AI Assistant Button -->
+    <button id="global-ai-fab" title="Ask AI Assistant (Project Level)">
+        <i data-lucide="bot"></i>
+    </button>
 
     <!-- Page loading script -->
-    <script src="js/modules/state.js"></script>
-    <script src="js/modules/utils.js"></script>
-    <script src="js/modules/api.js"></script>
-    <script src="js/modules/auth.js"></script>
-    <script src="js/modules/dashboard.js"></script>
-    <script src="js/modules/projects.js"></script>
-    <script src="js/modules/milestones.js"></script>
-    <script src="js/modules/documents.js"></script>
-    <script src="js/modules/chat.js"></script>
-    <script src="js/modules/logs.js"></script>
-    <script src="js/modules/stories.js"></script>
-    <script src="js/modules/team.js"></script>
-    <script src="js/modules/mytasks.js"></script>
-    <script src="js/modules/notifications.js"></script>
-    <script src="js/modules/websockets.js"></script>
-    <script src="js/modules/routing.js"></script>
+    <script src="js/modules/state.js?v=2.1"></script>
+    <script src="js/modules/utils.js?v=2.5"></script>
+    <script src="js/modules/api.js?v=2.0"></script>
+    <script src="js/modules/auth.js?v=2.0"></script>
+    <script src="js/modules/dashboard.js?v=2.0"></script>
+    <script src="js/modules/projects.js?v=2.1"></script>
+    <script src="js/modules/milestones.js?v=2.0"></script>
+    <script src="js/modules/documents.js?v=2.0"></script>
+    <script src="js/modules/chat.js?v=2.0"></script>
+    <script src="js/modules/logs.js?v=2.0"></script>
+    <script src="js/modules/stories.js?v=2.0"></script>
+    <script src="js/modules/team.js?v=2.0"></script>
+    <script src="js/modules/mytasks.js?v=2.0"></script>
+    <script src="js/modules/notifications.js?v=2.0"></script>
+    <script src="js/modules/websockets.js?v=2.0"></script>
+    <script src="js/modules/routing.js?v=2.0"></script>
 </body>
 
 </html>

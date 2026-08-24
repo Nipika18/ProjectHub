@@ -298,6 +298,9 @@ async function openProjectDetail(projectId) {
         if (activeTab === "documents") activeTab = "docs"; // Legacy fallback
         document.getElementById(`tab-${activeTab}-btn`)?.click();
 
+        // Fetch active generations to restore spinning buttons if user refreshed
+        await syncActiveGenerations(projectId);
+
         // Fetch detail lists
         loadProjectDetailMilestones(projectId);
         loadTeamMembers(projectId);
@@ -478,6 +481,8 @@ function buildMilestoneCardHtml(milestone, projectId, docs, stories, canManage, 
     const storyCount = stories ? stories.length : 0;
     const hasDocs = docCount > 0;
 
+    const isGenerating = state.activeMilestoneGenerations && state.activeMilestoneGenerations[milestone.id];
+
     return `
         <div class="timeline-card-node ${nodeClass}"></div>
         <div class="timeline-card-header">
@@ -493,8 +498,8 @@ function buildMilestoneCardHtml(milestone, projectId, docs, stories, canManage, 
             </div>
             <div class="milestone-header-right" style="display: flex; align-items: center; gap: 8px;">
                 ${canManage ? `
-                <button class="btn btn-ask-ai-gradient btn-sm" onclick="generateStoriesForMilestone(${projectId}, ${milestone.id}, '${safeTitle}', ${hasDocs}, this)" title="Generate User Stories for Milestone" style="border-radius: 12px; font-weight: 600; padding: 4px 10px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px;">
-                    <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Generate Stories
+                <button class="btn btn-ask-ai-gradient btn-sm" onclick="generateStoriesForMilestone(${projectId}, ${milestone.id}, '${safeTitle}', ${hasDocs}, this)" title="Generate User Stories for Milestone" style="border-radius: 12px; font-weight: 600; padding: 4px 10px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px;" ${isGenerating ? 'disabled' : ''}>
+                    ${isGenerating ? '<i data-lucide="loader" class="spin" style="width: 12px; height: 12px;"></i> Generating...' : '<i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Generate Stories'}
                 </button>
                 ` : ''}
                 ${docCount > 0 ? `
@@ -543,9 +548,13 @@ async function generateStoriesForMilestone(projectId, milestoneId, milestoneTitl
         return;
     }
 
+    if (!state.activeMilestoneGenerations) state.activeMilestoneGenerations = {};
+    state.activeMilestoneGenerations[milestoneId] = true;
+    if (typeof window.updateGlobalGeneratingBanner === "function") window.updateGlobalGeneratingBanner();
+
     const originalHtml = btnElement.innerHTML;
     btnElement.disabled = true;
-    btnElement.innerHTML = `<i data-lucide="loader" class="spin"></i> Generating...`;
+    btnElement.innerHTML = `<i data-lucide="loader" class="spin" style="width: 12px; height: 12px;"></i> Generating...`;
     lucide.createIcons();
 
     try {
@@ -560,17 +569,24 @@ async function generateStoriesForMilestone(projectId, milestoneId, milestoneTitl
 
         if (response.ok) {
             const data = await response.json();
-            showToast(`Successfully generated ${data.count} stories for milestone!`, "success");
-            refreshMilestoneViewsForProject(projectId);
-            if (typeof loadWorkspaceData === "function") loadWorkspaceData();
+            showToast(data.message || "Generation started in the background...", "success");
+            // DO NOT disable the spinner here; wait for websocket notification
         } else {
+            if (state.activeMilestoneGenerations) delete state.activeMilestoneGenerations[milestoneId];
+            if (typeof window.updateGlobalGeneratingBanner === "function") window.updateGlobalGeneratingBanner();
             const error = await response.json();
             showToast(error.detail || "Failed to generate stories", "error");
+            
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalHtml;
+            lucide.createIcons();
         }
     } catch (error) {
         console.error("Error generating stories:", error);
+        if (state.activeMilestoneGenerations) delete state.activeMilestoneGenerations[milestoneId];
+        if (typeof window.updateGlobalGeneratingBanner === "function") window.updateGlobalGeneratingBanner();
         showToast("Network error generating stories.", "error");
-    } finally {
+        
         btnElement.disabled = false;
         btnElement.innerHTML = originalHtml;
         lucide.createIcons();
@@ -816,6 +832,7 @@ window.generateStoriesFromDocument = async function (projectId, documentId, docN
         async () => {
             if (!state.activeGenerations) state.activeGenerations = {};
             state.activeGenerations[documentId] = true;
+            if (typeof window.updateGlobalGeneratingBanner === "function") window.updateGlobalGeneratingBanner();
 
             const btn = document.getElementById(`btn-gen-stories-${documentId}`);
             if (btn) {
@@ -836,25 +853,23 @@ window.generateStoriesFromDocument = async function (projectId, documentId, docN
 
                 if (res.ok) {
                     const data = await res.json();
-                    showToast(data.message || `Stories generated from "${docName}"`, "success");
-
-                    // If the user is currently on the User Stories section viewing this project, auto-reload stories list!
-                    const storyProjSelect = document.getElementById("story-project-select");
-                    if (state.activeSection === "stories" && storyProjSelect && parseInt(storyProjSelect.value) === projectId) {
-                        loadStories();
-                    }
+                    showToast(data.message || `Stories generation started for "${docName}"`, "success");
+                    // DO NOT clear spinner or state here; wait for websocket!
                 } else {
                     const err = await res.json();
                     showToast(err.detail || "Failed to generate stories", "error");
+                    if (state.activeGenerations) delete state.activeGenerations[documentId];
+                    if (typeof window.updateGlobalGeneratingBanner === "function") window.updateGlobalGeneratingBanner();
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i data-lucide="sparkles" style="width: 14px; height: 14px;"></i> Stories';
+                        if (window.lucide) lucide.createIcons();
+                    }
                 }
             } catch (e) {
                 showToast(`Network error: ${e.message}`, "error");
-            } finally {
-                if (state.activeGenerations) {
-                    delete state.activeGenerations[documentId];
-                }
-
-                refreshMilestoneViewsForProject(projectId);
+                if (state.activeGenerations) delete state.activeGenerations[documentId];
+                if (typeof window.updateGlobalGeneratingBanner === "function") window.updateGlobalGeneratingBanner();
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = '<i data-lucide="sparkles" style="width: 14px; height: 14px;"></i> Stories';
@@ -874,6 +889,10 @@ window.regenerateStoriesFromDocument = async function (projectId, documentId, do
         `Are you sure you want to regenerate stories from <strong>"${docName}"</strong>?<br><br><small>New stories will be added. Existing stories are kept but duplicates will be skipped automatically.</small>`,
         "Regenerate",
         async () => {
+            if (!state.activeGenerations) state.activeGenerations = {};
+            state.activeGenerations[documentId] = true;
+            if (typeof window.updateGlobalGeneratingBanner === "function") window.updateGlobalGeneratingBanner();
+
             showToast(`Regenerating stories from "${docName}"...`, "info");
 
             try {
@@ -888,13 +907,17 @@ window.regenerateStoriesFromDocument = async function (projectId, documentId, do
 
                 if (res.ok) {
                     const data = await res.json();
-                    showToast(data.message || `Stories regenerated from "${docName}"`, "success");
+                    showToast(data.message || `Stories regeneration started for "${docName}"`, "success");
                 } else {
                     const err = await res.json();
                     showToast(err.detail || "Failed to regenerate stories", "error");
+                    if (state.activeGenerations) delete state.activeGenerations[documentId];
+                    if (typeof window.updateGlobalGeneratingBanner === "function") window.updateGlobalGeneratingBanner();
                 }
             } catch (e) {
                 showToast(`Network error: ${e.message}`, "error");
+                if (state.activeGenerations) delete state.activeGenerations[documentId];
+                if (typeof window.updateGlobalGeneratingBanner === "function") window.updateGlobalGeneratingBanner();
             }
         },
         "warning"
@@ -1291,3 +1314,39 @@ function populateMilestoneDropdowns() {
     }
 }
 
+window.syncActiveGenerations = async function(projectId) {
+    if (!state.token || !projectId) return;
+    try {
+        const activeGenRes = await fetch(`${API_BASE}/api/projects/${projectId}/stories/active-generations`, {
+            headers: { "Authorization": `Bearer ${state.token}` }
+        });
+        if (activeGenRes.ok) {
+            const activeKeys = await activeGenRes.json();
+            state.activeMilestoneGenerations = {};
+            state.activeGenerations = {};
+            activeKeys.forEach(key => {
+                if (key.startsWith('milestone_')) {
+                    state.activeMilestoneGenerations[key.split('_')[1]] = true;
+                } else if (key.startsWith('document_')) {
+                    state.activeGenerations[key.split('_')[1]] = true;
+                }
+            });
+            window.updateGlobalGeneratingBanner();
+        }
+    } catch (e) {
+        console.error("Failed to fetch active generations:", e);
+    }
+};
+
+window.updateGlobalGeneratingBanner = function() {
+    const banner = document.getElementById("global-generating-banner");
+    if (!banner) return;
+    
+    const count = Object.keys(state.activeMilestoneGenerations || {}).length + Object.keys(state.activeGenerations || {}).length;
+    if (count > 0) {
+        banner.style.display = "flex";
+        if (window.lucide) lucide.createIcons();
+    } else {
+        banner.style.display = "none";
+    }
+};
