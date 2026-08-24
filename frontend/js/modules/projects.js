@@ -568,8 +568,6 @@ async function generateStoriesForMilestone(projectId, milestoneId, milestoneTitl
         });
 
         if (response.ok) {
-            const data = await response.json();
-            showToast(data.message || "Generation started in the background...", "success");
             // DO NOT disable the spinner here; wait for websocket notification
         } else {
             if (state.activeMilestoneGenerations) delete state.activeMilestoneGenerations[milestoneId];
@@ -852,8 +850,6 @@ window.generateStoriesFromDocument = async function (projectId, documentId, docN
                 });
 
                 if (res.ok) {
-                    const data = await res.json();
-                    showToast(data.message || `Stories generation started for "${docName}"`, "success");
                     // DO NOT clear spinner or state here; wait for websocket!
                 } else {
                     const err = await res.json();
@@ -893,8 +889,6 @@ window.regenerateStoriesFromDocument = async function (projectId, documentId, do
             state.activeGenerations[documentId] = true;
             if (typeof window.updateGlobalGeneratingBanner === "function") window.updateGlobalGeneratingBanner();
 
-            showToast(`Regenerating stories from "${docName}"...`, "info");
-
             try {
                 const res = await fetch(`${API_BASE}/api/projects/${projectId}/stories/generate-from-document`, {
                     method: "POST",
@@ -906,8 +900,7 @@ window.regenerateStoriesFromDocument = async function (projectId, documentId, do
                 });
 
                 if (res.ok) {
-                    const data = await res.json();
-                    showToast(data.message || `Stories regeneration started for "${docName}"`, "success");
+                    // DO NOT show toast here; wait for websocket completion!
                 } else {
                     const err = await res.json();
                     showToast(err.detail || "Failed to regenerate stories", "error");
