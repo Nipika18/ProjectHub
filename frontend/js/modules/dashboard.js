@@ -173,14 +173,14 @@ function bindSidebarEvents() {
         card.addEventListener("click", () => {
             state.activeProjectTab = "docs";
             localStorage.setItem("activeProjectTab", "docs");
-            if (state.currentProject) {
-                window.location.hash = `#projects/${state.currentProject.id}`;
+            
+            const targetProjectId = state.globalProjectId || state.currentProject?.id || (state.projects && state.projects[0]?.id);
+            if (targetProjectId) {
+                window.location.hash = `#projects/${targetProjectId}`;
                 setTimeout(() => {
                     const docsTabBtn = document.getElementById("tab-docs-btn");
                     if (docsTabBtn) docsTabBtn.click();
                 }, 100);
-            } else if (state.projects && state.projects.length > 0) {
-                window.location.hash = `#projects/${state.projects[0].id}`;
             } else {
                 window.location.hash = "#projects";
             }
