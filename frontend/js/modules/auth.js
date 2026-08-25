@@ -14,11 +14,8 @@ function showAuthModal(show) {
 function bindAuthEvents() {
     const goReg = document.getElementById("go-to-register");
     const goLogin = document.getElementById("go-to-login");
-    const goAdminLogin = document.getElementById("go-to-admin-login");
-    const goBackToUserLogin = document.getElementById("go-back-to-user-login");
     const loginForm = document.getElementById("login-form");
     const registerForm = document.getElementById("register-form");
-    const adminLoginForm = document.getElementById("admin-login-form");
     const btnSignout = document.getElementById("btn-signout");
 
     const forgotForm = document.getElementById("forgot-password-form");
@@ -27,16 +24,13 @@ function bindAuthEvents() {
     function showForm(formToShow) {
         loginForm.classList.remove("active");
         registerForm.classList.remove("active");
-        adminLoginForm.classList.remove("active");
         if (forgotForm) forgotForm.classList.remove("active");
         if (resetForm) resetForm.classList.remove("active");
         formToShow.classList.add("active");
     }
 
-    goReg.addEventListener("click", () => showForm(registerForm));
-    goLogin.addEventListener("click", () => showForm(loginForm));
-    goAdminLogin.addEventListener("click", () => showForm(adminLoginForm));
-    goBackToUserLogin.addEventListener("click", () => showForm(loginForm));
+    if (goReg) goReg.addEventListener("click", () => showForm(registerForm));
+    if (goLogin) goLogin.addEventListener("click", () => showForm(loginForm));
 
     // Regular user login
     loginForm.addEventListener("submit", async (e) => {
@@ -90,65 +84,6 @@ function bindAuthEvents() {
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalBtnText;
-        }
-    });
-
-    // Admin login
-    adminLoginForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const email = document.getElementById("admin-login-email").value;
-        const password = document.getElementById("admin-login-password").value;
-        const errorDiv = document.getElementById("admin-login-error");
-
-        errorDiv.style.display = "none";
-
-        const submitBtn = adminLoginForm.querySelector('button[type="submit"]');
-        const originalBtnText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i data-lucide="loader" class="spin" style="width:16px;height:16px;margin-right:6px;"></i> Signing in...';
-        lucide.createIcons();
-
-        try {
-            const response = await fetch(`${API_BASE}/api/auth/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password, full_name: "Admin Login Attempt" })
-            });
-
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.detail || "Authentication failed.");
-            }
-
-            const data = await response.json();
-
-            if (!data.user.is_admin) {
-                errorDiv.textContent = "Access Denied: This account does not have administrator privileges.";
-                errorDiv.style.display = "block";
-                return;
-            }
-
-            localStorage.setItem("token", data.access_token);
-            if (data.refresh_token) {
-                localStorage.setItem("refresh_token", data.refresh_token);
-                state.refreshToken = data.refresh_token;
-            }
-            state.token = data.access_token;
-            state.user = data.user;
-
-            showToast("Welcome back, Admin!", "success");
-            window.location.hash = "#dashboard";
-            setTimeout(() => {
-                initApp();
-            }, 0);
-        } catch (err) {
-            errorDiv.textContent = err.message;
-            errorDiv.style.display = "block";
-        } finally {
-            if (typeof submitBtn !== 'undefined') {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
-            }
         }
     });
 
