@@ -33,9 +33,8 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[Sprint AI] Orphan purge skipped (non-fatal): {e}")
     
-    import asyncio
-    from backend.app.core.worker import start_document_worker
-    asyncio.create_task(start_document_worker())
+    # Start background document worker removed to prevent database from constantly staying active
+    # (Documents will now be processed via FastAPI BackgroundTasks instead)
     
     yield
 
@@ -111,10 +110,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Set up CORS middleware for local testing/cross-origin calls
+# Set up CORS middleware — restrict to known origins in production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://sprintai.softprodigy.in",
+        "https://sprintai.softprodigy.in",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

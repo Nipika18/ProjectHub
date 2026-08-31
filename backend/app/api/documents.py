@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Request, BackgroundTasks
 from fastapi.responses import FileResponse, StreamingResponse
 from typing import List, Optional
 from sqlalchemy.orm import Session
 import os
-import io
 
 from backend.app.core.database import get_db
 from backend.app.core.security import get_current_user, get_current_admin_user, check_is_project_manager_or_admin
@@ -22,6 +21,7 @@ async def upload_document(
     milestone_id: Optional[int] = Form(None),
     category: str = Form("team"),
     file: UploadFile = File(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -137,6 +137,12 @@ async def upload_document(
         )
 
         upload_success = True
+        
+        # Trigger background processing immediately instead of polling the database
+        # FastAPI BackgroundTasks natively supports async functions
+        from backend.app.core.worker import process_document_background
+        background_tasks.add_task(process_document_background, new_doc.id)
+            
         return new_doc
     finally:
         if not upload_success:

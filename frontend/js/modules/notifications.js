@@ -7,7 +7,7 @@ let notificationPollInterval = null;
 function startNotificationPolling() {
     stopNotificationPolling();
     loadNotifications();
-    notificationPollInterval = setInterval(loadNotifications, 45000); // Check every 45 seconds for smooth performance
+    // Removed 45-second polling interval to prevent serverless database from staying active 24/7
 }
 
 function stopNotificationPolling() {

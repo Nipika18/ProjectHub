@@ -75,8 +75,12 @@ def list_project_milestones(
 
     milestones = db.query(Milestone).filter(Milestone.project_id == project_id).order_by(Milestone.due_date.asc()).all()
 
-    # Enrich with assignee and reporter names
-    users_map = {u.id: u.full_name for u in db.query(User.id, User.full_name).all()}
+    # Enrich with assignee and reporter names (only fetch referenced users, not all)
+    user_ids = set()
+    for m in milestones:
+        if m.assignee_id: user_ids.add(m.assignee_id)
+        if m.reporter_id: user_ids.add(m.reporter_id)
+    users_map = {u.id: u.full_name for u in db.query(User.id, User.full_name).filter(User.id.in_(user_ids)).all()} if user_ids else {}
     for m in milestones:
         m.assignee_name = users_map.get(m.assignee_id)
         m.reporter_name = users_map.get(m.reporter_id)

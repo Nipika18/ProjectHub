@@ -131,7 +131,7 @@ def check_is_project_member_or_admin(db: Session, user, project_id: int):
         ProjectMember.user_id == user.id
     ).first()
     
-    if not (project or member):
+    if not member and not (project and project.owner_id == user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You must be a member of this project to perform this action."

@@ -29,7 +29,7 @@ def mark_all_as_read(
     """Marks all notifications for the current authenticated user as read."""
     db.query(Notification).filter(
         Notification.user_id == current_user.id,
-        Notification.is_read == False
+        Notification.is_read.is_(False)
     ).update({Notification.is_read: True}, synchronize_session="fetch")
     db.commit()
     return {"detail": "All notifications marked as read."}
