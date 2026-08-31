@@ -55,8 +55,14 @@ function bindAuthEvents() {
             });
 
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.detail || "Authentication failed.");
+                let errMsg = "Authentication failed.";
+                try {
+                    const err = await response.json();
+                    errMsg = err.detail || errMsg;
+                } catch (_) {
+                    if (response.status >= 500) errMsg = "Server is temporarily unavailable. Please try again later.";
+                }
+                throw new Error(errMsg);
             }
 
             const data = await response.json();
