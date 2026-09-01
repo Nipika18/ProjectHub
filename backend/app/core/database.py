@@ -63,8 +63,11 @@ def init_db():
             conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS due_date TIMESTAMP;"))
         except Exception:
             pass
-        conn.execute(text(
-            "CREATE INDEX IF NOT EXISTS document_chunks_hnsw_idx "
-            "ON document_chunks USING hnsw (embedding vector_cosine_ops);"
-        ))
+        try:
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS document_chunks_hnsw_idx "
+                "ON document_chunks USING hnsw (embedding vector_cosine_ops);"
+            ))
+        except Exception as e:
+            print(f"[Sprint AI] Warning: Could not create HNSW index (pgvector version might be old): {e}")
         conn.commit()
